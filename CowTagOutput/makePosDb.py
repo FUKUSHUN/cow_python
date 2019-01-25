@@ -16,10 +16,10 @@ class PosDb:
 	def __init__(self, cId, date):
 		self.cowId = cId
 		self.date = date
-		f = open("Record/path.txt", "r") #ここにそのパスが書いてあるのでローカルで設定すること
+		f = open("Record/path.txt", "r", encoding='utf-8') #ここにそのパスが書いてあるのでローカルで設定すること
 		self.parentPath = f.read()
 		f.close()
-	
+
 	#データベースを作成する
 	def makeDb(self):
 		self.__getGpsId() #gpsIdを取得・格納
@@ -55,7 +55,7 @@ class PosDb:
 	def __readCsv(self):
 		#csv読み込み (見つからない場合のエラー回避)
 		try:
-			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "/" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'),index_col = 0)
+			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "/" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'),index_col = 0, engine='python')
 			df = df.fillna(0) #欠損等は0で補完
 			return df
 		except FileNotFoundError:

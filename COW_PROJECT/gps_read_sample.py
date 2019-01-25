@@ -7,9 +7,9 @@ import time
 import gc
 
 def main():
-	dbFilepath = "../CowTagOutput/DB/PosDB/"
-	start = datetime.datetime(2018, 2, 20, 23, 0, 0)
-	end = datetime.datetime(2018, 2, 28, 0, 0, 0)
+	#dbFilepath = "../CowTagOutput/DB/PosDB/"
+	start = datetime.datetime(2018, 2, 16, 0, 0, 0)
+	end = datetime.datetime(2018, 2, 17, 0, 0, 0)
 
 	dt = datetime.datetime(start.year, start.month, start.day)
 	a = start
