@@ -2,7 +2,7 @@
 import pandas as pd
 import re
 import datetime
-import cow.cowshed as Cowshed
+import cows.cowshed as Cowshed
 import time
 import gc
 

@@ -1,10 +1,12 @@
 #-*- encoding:utf-8 -*-
 import datetime
 import csv
-import cow.cow as cow
 import pandas as pd
 import re
 import time
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
+import cow #自作クラス
 
 class Cowshed:
 	date:str #YYYY/mm/dd

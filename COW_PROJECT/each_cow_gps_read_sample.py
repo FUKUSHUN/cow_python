@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 import re
 import datetime
-import cow.cow as Cow
+import cows.cow as Cow
 import gc
-import cow.geography as geo
+import cows.geography as geo
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import sys
 import statistics
-import cow.momentum_analysys as ma
+import cows.momentum_analysys as ma
 import numpy as np
 
 def read_gps(cow_id, start, end):

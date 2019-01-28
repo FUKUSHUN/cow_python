@@ -61,6 +61,9 @@ class PosDb:
 		except FileNotFoundError:
 			df = pd.DataFrame([])
 			return df
+		except pd.errors.ParserError:
+			df = pd.DataFrame([])
+			return df
 		
     #日付をdatetimeにして返す
 	def __transDateTime(self,time, date):

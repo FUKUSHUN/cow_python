@@ -1,6 +1,9 @@
 #-*- encoding:utf-8 -*-
 import datetime
-import cow.gps.gps_nmea_data_list as gpslist
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
+import gps.gps_nmea_data_list as gpslist #自作クラス
 
 class Cow:
 	cow_id:int
