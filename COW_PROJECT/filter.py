@@ -12,7 +12,7 @@ import sys
 import statistics
 import cow.momentum_analysys as ma
 import numpy as np
-from sklearn.cluster import KMeans
+import changefinder
 
 #データベースから指定牛の指定期間のデータを読み込む (元データ (1 Hz) を5sごとに戻す処理も含む)
 def read_gps(cow_id, start, end):
@@ -89,6 +89,56 @@ def plot_velocity_data(t_list, d_list, v_list):
 	#plt.savefig(t_list[0].strftime("%y-%m-%d") + "-test.png")
 	plt.show()
 
+def fft(f, dt, fc):
+	N = len(f) #データ数
+	x = np.arange(0, N * dt, dt) #時間軸の作成
+	fq = np.linspace(0, 1.0/dt, N) # 周波数軸の作成　linspace(開始,終了,分割数)
+	F = np.fft.fft(f) # 高速フーリエ変換(FFT)
+	F_abs = np.abs(F) # FFT結果（複素数）を絶対値に変換
+	F_abs_amp = F_abs / N * 2 # 交流成分はデータ数で割って2倍
+	F_abs_amp[0] = F_abs_amp[0] / 2 #2倍不要
+
+	F2 = np.copy(F) # FFT結果コピー
+	F2[(fq > fc)] = 0 # カットオフを超える周波数のデータをゼロにする
+	F2_abs = np.abs(F2) # FFT結果（複素数）を絶対値に変換
+	F2_abs_amp = F2_abs / N * 2 # 交流成分はデータ数で割って2倍
+	F2_abs_amp[0] = F2_abs_amp[0] / 2 #2倍不要
+	"""
+	# グラフ表示（FFT解析結果）
+	plt.xlabel('freqency(Hz)', fontsize=14)
+	plt.ylabel('amplitude', fontsize=14)
+	plt.plot(fq, F_abs_amp)
+	plt.show()
+	# グラフ表示（IFFT復元結果）
+	F_ifft = np.fft.ifft(F) # 逆フーリエ変換(IFFT)
+	F_ifft_real = F_ifft.real # 実数部
+	plt.plot(x, F_ifft_real, c="g") # IFFT（逆変換）
+	plt.show()
+	"""
+
+	# グラフ表示 (FFT解析結果 (ノイズ除去後) )
+	plt.xlabel('freqency(Hz)', fontsize=14)
+	plt.ylabel('amplitude', fontsize=14)
+	plt.plot(fq, F2_abs_amp, c='r')
+	plt.show()
+	# グラフ表示（IFFT復元結果）
+	F2_ifft = np.fft.ifft(F2) # 逆フーリエ変換 (IFFT) 
+	F2_ifft_real = F2_ifft.real # 実数部
+	plt.plot(x, F2_ifft_real, c="g") # IFFT (逆変換)
+	plt.show()
+
+	ret = []
+	cf = changefinder.ChangeFinder(r=0.01, order=1, smooth=6)
+	for v in F2_ifft_real:
+		score = cf.update(v)
+		ret.append(score)
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+	ax.plot(ret)
+	ax2 = ax.twinx()
+	ax2.plot(F2_ifft_real,'r')
+	plt.show()
+
 if __name__ == '__main__':
 	fc = 0.005 #カットオフ周波数
 	dt = 5 #サンプリング間隔
@@ -107,52 +157,11 @@ if __name__ == '__main__':
 		#print(len(t_list))
 		#t_list, d_list, v_list =  ma.differ_filter(t_list, d_list, v_list)
 		
-		N = len(v_list) #データ数
-		x = np.arange(0, N * dt, dt) #時間軸の作成
-		fq = np.linspace(0, 1.0/dt, N) # 周波数軸の作成　linspace(開始,終了,分割数)
 		f = np.array(v_list) #f(x)
-		F = np.fft.fft(f) # 高速フーリエ変換(FFT)
-		F_abs = np.abs(F) # FFT結果（複素数）を絶対値に変換
-		F_abs_amp = F_abs / N * 2 # 交流成分はデータ数で割って2倍
-		F_abs_amp[0] = F_abs_amp[0] / 2 #2倍不要
-		
-		F2 = np.copy(F) # FFT結果コピー
-		F2[(fq > fc)] = 0 # カットオフを超える周波数のデータをゼロにする
-		F2_abs = np.abs(F2) # FFT結果（複素数）を絶対値に変換
-		F2_abs_amp = F2_abs / N * 2 # 交流成分はデータ数で割って2倍
-		F2_abs_amp[0] = F2_abs_amp[0] / 2 #2倍不要
-		
-		# グラフ表示（FFT解析結果）
-		plt.xlabel('freqency(Hz)', fontsize=14)
-		plt.ylabel('amplitude', fontsize=14)
-		plt.plot(fq, F_abs_amp)
-		plt.show()
-		# グラフ表示（IFFT復元結果）
-		F_ifft = np.fft.ifft(F) # 逆フーリエ変換(IFFT)
-		F_ifft_real = F_ifft.real # 実数部
-		plt.plot(x, F_ifft_real, c="g") # IFFT（逆変換）
-		plt.show()
-		
-		# グラフ表示 (FFT解析結果 (ノイズ除去後) )
-		plt.xlabel('freqency(Hz)', fontsize=14)
-		plt.ylabel('amplitude', fontsize=14)
-		plt.plot(fq, F2_abs_amp, c='r')
-		plt.show()
-		# グラフ表示（IFFT復元結果）
-		F2_ifft = np.fft.ifft(F2) # 逆フーリエ変換 (IFFT) 
-		F2_ifft_real = F2_ifft.real # 実数部
-		plt.plot(x, F2_ifft_real, c="g") # IFFT (逆変換
-		plt.show()
-		X = np.zeros((F2_ifft_real.size, 1))
-		for i in range(F2_ifft_real.size):
-			X[i, 0] = F2_ifft_real[i]
-		print(X)
-		k_means = KMeans(2, init='k-means++').fit(X)
-		plt.scatter(x, F2_ifft_real, c = k_means.labels_, s = 5)
-		plt.show()
+		fft(f, dt, fc)
 		
 		#print(len(t_list))
 		#t_list, d_list, v_list =  ma.differ_filter2(t_list, d_list, v_list)
 		print(len(t_list))
-		plot_velocity_data(t_list, d_list, v_list)
+		#plot_velocity_data(t_list, d_list, v_list)
 	
