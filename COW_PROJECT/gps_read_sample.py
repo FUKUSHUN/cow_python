@@ -9,7 +9,7 @@ import gc
 def main():
 	#dbFilepath = "../CowTagOutput/DB/PosDB/"
 	start = datetime.datetime(2018, 2, 16, 0, 0, 0)
-	end = datetime.datetime(2018, 2, 17, 0, 0, 0)
+	end = datetime.datetime(2018, 2, 16, 1, 0, 0)
 
 	dt = datetime.datetime(start.year, start.month, start.day)
 	a = start
@@ -23,7 +23,10 @@ def main():
 			start_time = time.time()
 			df = cows.get_cow_list(a, a + datetime.timedelta(minutes = 60))
 			end_time = time.time()
-			print(a.strftime("%H:%M:%S") + " : {0}".format(end_time - start_time) + " [sec]")
+			#print(a.strftime("%H:%M:%S") + " : {0}".format(end_time - start_time) + " [sec]")
+			for i in range(len(df.columns)):
+				if(df.iloc[0,i] == 20112):
+					print("hogehoge")
 			a = a + datetime.timedelta(minutes = 60)
 			del df
 			gc.collect()

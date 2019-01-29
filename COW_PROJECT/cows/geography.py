@@ -19,33 +19,40 @@ def get_absolute_speed(g1:gpsdata.GpsNmeaData, g2:gpsdata.GpsNmeaData):
 	return d / (g2.get_datetime() - g1.get_datetime()).total_seconds(), a
 
 """
-	コサイン類似度を求める
+	被接近度 (コサイン類似度) を求める
 	g1	:GpsNmeaData (main)
 	g2	:GpsNmeaData (other)
+	g2_beforeからg2への移動の方向とg2_beforeからg1_beforeへの移動の方向を見たい
 	
 """
-def get_cos_sim(g1:gpsdata.GpsNmeaData, g2:gpsdata.GpsNmeaData, g1_before:gpsdata.GpsNmeaData, g2_before:gpsdata.GpsNmeaData):
+def get_cos_sim(g1_after:gpsdata.GpsNmeaData, g2_after:gpsdata.GpsNmeaData, g1:gpsdata.GpsNmeaData, g2:gpsdata.GpsNmeaData):
+	lat1_a, lon1_a, _ = g1_after.get_gps_info(g1_after.get_datetime())
 	lat1, lon1, _ = g1.get_gps_info(g1.get_datetime())
-	lat1_b, lon1_b, _ = g1_before.get_gps_info(g1_before.get_datetime())
+	lat2_a, lon2_a, _ = g2_after.get_gps_info(g2_after.get_datetime())
 	lat2, lon2, _ = g2.get_gps_info(g2.get_datetime())
-	lat2_b, lon2_b, _ = g2_before.get_gps_info(g2_before.get_datetime())
 
-	_, g1deg = get_distance_and_direction(lat1_b, lon1_b, lat1, lon1)
-	_, g2deg = get_distance_and_direction(lat2_b, lon2_b, lat2, lon2)
+	_, g1deg = get_distance_and_direction(lat1, lon1, lat1_a, lon1_a)
+	_, g2deg = get_distance_and_direction(lat2, lon2, lat2_a, lon2_a)
 	_, xdeg = get_distance_and_direction(lat1, lon1, lat2, lon2)
 
-	#g1, g2が同じ座標の時
-	if(g1deg == -1 and g2deg == -1):
+	"""
+	#g2が止まっているときでもg1で代用 (休息中の牛が対象牛に興味を示すという矛盾を抱えているのでペンディング)
+	if(g1deg == -1 and xdeg != -1):
+		return -1 * math.cos(get_relative_angle(xdeg, g1deg))
+	下のifに影響を及ぼす
+	"""
+	#g1, g1_before g2, g2_beforeが同じ座標の時 (どちらの牛も止まっている)
+	if(g2deg == -1):
 		return 0
-	#g1が止まっているときでもg2で代用
-	elif(g1deg == -1 and xdeg != -1):
-		return -1 * math.cos(get_relative_angle(g2deg, xdeg))
+	#2頭の位置が同じときにはお互いの速度ベクトルのコサイン類似度で代用
+	elif(xdeg == -1 and g1deg != -1 and g2deg != -1):
+		return math.cos(get_relative_angle(g1deg, g2deg))
 	else:
 		#角度がおかしな値を出しているとき
 		if(g1deg > 360 or g1deg < 0 or xdeg > 360 or xdeg < 0):
 			return 0
 		else:
-			return math.cos(get_relative_angle(g1deg, xdeg))
+			return math.cos(get_relative_angle(xdeg, g2deg))
 
 
 """
@@ -82,10 +89,10 @@ def get_distance_and_direction(lat1, lon1, lat2, lon2):
 #bからみたaの角度を見る (弧度法 [rad]で返す)
 def get_relative_angle(a, b):
 	if a < 0 or 360 < a:
-		print("角度が不正です")
+		#print("角度が不正です")
 		return -1
 	if b < 0 or 360 < b:
-		print("角度が不正です")
+		#print("角度が不正です")
 		return -1
 	return math.radians(abs(a - b)) # the return x will become 0 < x < 2PI
 	

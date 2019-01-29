@@ -49,7 +49,7 @@ class Cowshed:
 			#end_time = time.time()
 			gps_data_list.append(c.get_gps_list(start, end))
 			#print("{0}".format(end_time - start_time) + " [sec]")
-		df = pd.DataFrame([cow_id_list, gps_data_list], index = ["Id", "data"])
+		df = pd.DataFrame([cow_id_list, gps_data_list], index = ["Id", "Data"])
 		del c
 		"""
 		data_list = []
@@ -58,7 +58,7 @@ class Cowshed:
 			data.append(c.get_cow_id())
 			data.append(c.get_gps_list(start, end))
 			data_list.append(data)
-		df = pd.DataFrame(data_list, columns = ["Id", "data"])
+		df = pd.DataFrame(data_list, columns = ["Id", "Data"], index_col = 0)
 		"""
 		del cow_id_list
 		del gps_data_list
