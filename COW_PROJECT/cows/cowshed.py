@@ -12,7 +12,10 @@ class Cowshed:
 	date:str #YYYY/mm/dd
 	cow_list:list #Cow型のリスト
 	record_file_path = "../CowTagOutput/csv/"
-	
+	"""
+		その日いた牛を登録する
+		日付をキーにしてコンストラクタでGPSデータの読み込み
+	"""
 	def __init__(self, date:datetime):
 		self.cow_list = []
 		self.date = date.strftime("%Y/%m/%d")
