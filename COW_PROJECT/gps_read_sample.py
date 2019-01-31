@@ -1,6 +1,5 @@
 #-*- encoding:utf-8 -*-
 import pandas as pd
-import re
 import datetime
 import cows.cowshed as Cowshed
 import time
