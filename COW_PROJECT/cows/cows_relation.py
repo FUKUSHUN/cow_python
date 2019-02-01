@@ -188,7 +188,12 @@ class CowsRelation:
         for d, n in zip(d_list, n_list):
             wd = -100 * (1 + math.exp(-1 * (d - 5) / 1 - 1.5)) + 100
             wn = n * 5
-            weights.append(coef * (wd / sum_d) + (1 - coef) * (wn / sum_n))
+            if(sum_d == 0):
+                weights.append(wn / sum_n)
+            elif(sum_n == 0):
+                weights.append(wd / sum_d)
+            else:
+                weights.append(coef * (wd / sum_d) + (1 - coef) * (wn / sum_n))
         return weights
 
     """

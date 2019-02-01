@@ -69,7 +69,7 @@ def main(start, end, dic):
         a = dt
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 10, 31, 4, 0, 0)
-    end = datetime.datetime(2018, 10, 31, 8, 0, 0)
+    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
+    end = datetime.datetime(2018, 11, 1, 1, 0, 0)
     dic = init(end)
     main(start, end, dic)
