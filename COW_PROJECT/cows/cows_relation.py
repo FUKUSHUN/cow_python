@@ -143,7 +143,6 @@ class CowsRelation:
         self.member_history = []
         self.unpickling()
         self.pickling()
-        print(self.main_cow_id)
 
     """
         評価値 (被接近度) を計算する
