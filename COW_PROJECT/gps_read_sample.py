@@ -23,9 +23,6 @@ def main():
 			df = cows.get_cow_list(a, a + datetime.timedelta(minutes = 60))
 			end_time = time.time()
 			#print(a.strftime("%H:%M:%S") + " : {0}".format(end_time - start_time) + " [sec]")
-			for i in range(len(df.columns)):
-				if(df.iloc[0,i] == 20112):
-					print("hogehoge")
 			a = a + datetime.timedelta(minutes = 60)
 			del df
 			gc.collect()

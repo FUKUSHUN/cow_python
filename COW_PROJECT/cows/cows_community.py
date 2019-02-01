@@ -17,7 +17,7 @@ import gps.gps_nmea_data_list as gpslist #自作クラス
 """
 def extract_community(df:pd.DataFrame, threshold):
     #隣接行列を作成する
-    matrix = np.zeros(len(df.columns), len(df.columns)) # 行列の作成
+    matrix = np.zeros((len(df.columns), len(df.columns))) # 行列の作成
     cnt = 0
     ave = 0.0
     for i in range(len(df.columns)):
@@ -34,10 +34,10 @@ def extract_community(df:pd.DataFrame, threshold):
         for j in range(len(df.columns)):
             if(i != j):
                 dev += (matrix[i,j] - ave) ** 2
-    dev = dev ** (1 / 2)
+    dev = (dev / cnt) ** (1 / 2)
     for i in range(len(df.columns)):
         for j in range(len(df.columns)):
-            if(10 < (matrix[i, j] - ave) / dev): #偏差値60以上と同義
+            if(1 < ((matrix[i, j] - ave) / dev)): #偏差値60以上と同義
                 matrix[i, j] = 1
             else:
                 matrix[i, j] = 0
@@ -50,7 +50,7 @@ def extract_community(df:pd.DataFrame, threshold):
     for i in range(len(df.columns)):
         for j in range(len(df.columns)):
             if(matrix[i, j] == 1):
-                    edges.append((i, j))
+                edges.append((df.iloc[0, i], df.iloc[0, j]))
     g.add_edges_from(edges)
     partition = community.best_partition(g)
     return partition

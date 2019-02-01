@@ -5,3 +5,4 @@ DB/
 __pycache__/
 bin/
 path.txt
+serial/
