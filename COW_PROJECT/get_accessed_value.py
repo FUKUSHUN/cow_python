@@ -9,6 +9,7 @@ import cows.cowshed as Cowshed
 import datetime
 import gc
 import csv
+import time
 
 def init(dt):
     #シリアライズファイルの初期化
@@ -70,6 +71,9 @@ def main(start, end, dic):
 
 if __name__ == '__main__':
     start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 11, 1, 1, 0, 0)
+    end = datetime.datetime(2018, 10, 2, 0, 0, 0)
+    s = time.time()
     dic = init(end)
     main(start, end, dic)
+    e = time.time()
+    print(e - s)
