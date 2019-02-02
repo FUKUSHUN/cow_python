@@ -28,21 +28,19 @@ class TwoCowsRelation:
         g_list2 :   gpslist
     """
     def make_distance_data(self):
-        g_list1 = self.cow_gps_list1
-        g_list2 = self.cow_gps_list2
         distance_list = []
         i1 = 0 #g_list2のインデックス
         i2 = 0 #g_list2のインデックス
-        while(i1 < len(g_list1) and i2 < len(g_list2)):
-            t = g_list1[i1].get_datetime()
-            if(t == g_list2[i2].get_datetime()):
-                lat1, lon1, _ = g_list1[i1].get_gps_info(t)
-                lat2, lon2, _ = g_list2[i2].get_gps_info(g_list2[i2].get_datetime())
+        while(i1 < len(self.cow_gps_list1) and i2 < len(self.cow_gps_list2)):
+            t = self.cow_gps_list1[i1].get_datetime()
+            if(t == self.cow_gps_list2[i2].get_datetime()):
+                lat1, lon1, _ = self.cow_gps_list1[i1].get_gps_info(t)
+                lat2, lon2, _ = self.cow_gps_list2[i2].get_gps_info(self.cow_gps_list2[i2].get_datetime())
                 d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2)
                 i1 += 1
                 i2 += 1
                 distance_list.append(d) #左に時刻，右に距離
-            elif(t > g_list2[i2].get_datetime()):
+            elif(t > self.cow_gps_list2[i2].get_datetime()):
                 i2 += 1
             else:
                 i1 += 1
@@ -56,23 +54,21 @@ class TwoCowsRelation:
         dfがごく短い時間 (例えば10分) 間隔でつくられることを想定して，データが欠けまくっていることはないだろう (あっても1回くらい) と考えてこのようにしている
     """
     def make_cosine_data(self):
-        g_list1 = self.cow_gps_list1
-        g_list2 = self.cow_gps_list2
         cosine_list = []
         i1 = 0 #g_list2のインデックス
         i2 = 0 #g_list2のインデックス
-        while(i1 < len(g_list1) and i2 < len(g_list2)):
-            t = g_list1[i1].get_datetime()
-            if(t == g_list2[i2].get_datetime()):
-                if(i1 != len(g_list1) - 1 and i2 != len(g_list2) - 1):
-                    cos = geography.get_cos_sim(g_list1[i1 + 1], g_list2[i2 + 1], g_list1[i1], g_list2[i2])
+        while(i1 < len(self.cow_gps_list1) and i2 < len(self.cow_gps_list2)):
+            t = self.cow_gps_list1[i1].get_datetime()
+            if(t == self.cow_gps_list2[i2].get_datetime()):
+                if(i1 != len(self.cow_gps_list1) - 1 and i2 != len(self.cow_gps_list2) - 1):
+                    cos = geography.get_cos_sim(self.cow_gps_list1[i1 + 1], self.cow_gps_list2[i2 + 1], self.cow_gps_list1[i1], self.cow_gps_list2[i2])
                     i1 += 1
                     i2 += 1
                     cosine_list.append(cos) #左に時刻，右にコサイン類似度
                 else:
                     i1 += 1
                     i2 += 1
-            elif(t > g_list2[i2].get_datetime()):
+            elif(t > self.cow_gps_list2[i2].get_datetime()):
                 i2 = i2 + 1
             else:
                 i1 = i1 + 1
@@ -95,22 +91,20 @@ class TwoCowsRelation:
         threshold : 距離の閾値
     """
     def count_near_distance_time(self, threshold):
-        g_list1 = self.cow_gps_list1
-        g_list2 = self.cow_gps_list2
         count = 0 #カウント用変数
         i1 = 0 #g_list2のインデックス
         i2 = 0 #g_list2のインデックス
-        while(i1 < len(g_list1) and i2 < len(g_list2)):
-            t = g_list1[i1].get_datetime()
-            if(t == g_list2[i2].get_datetime()):
-                lat1, lon1, _ = g_list1[i1].get_gps_info(t)
-                lat2, lon2, _ = g_list2[i2].get_gps_info(g_list2[i2].get_datetime())
+        while(i1 < len(self.cow_gps_list1) and i2 < len(self.cow_gps_list2)):
+            t = self.cow_gps_list1[i1].get_datetime()
+            if(t == self.cow_gps_list2[i2].get_datetime()):
+                lat1, lon1, _ = self.cow_gps_list1[i1].get_gps_info(t)
+                lat2, lon2, _ = self.cow_gps_list2[i2].get_gps_info(self.cow_gps_list2[i2].get_datetime())
                 d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2)
                 i1 += 1
                 i2 += 1
                 if(d < threshold):
                     count += 1
-            elif(t > g_list2[i2].get_datetime()):
+            elif(t > self.cow_gps_list2[i2].get_datetime()):
                 i2 += 1
             else:
                 i1 += 1

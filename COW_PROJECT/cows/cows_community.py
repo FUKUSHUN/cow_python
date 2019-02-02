@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import networkx as nx
 import community
+import time
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
@@ -21,11 +22,12 @@ def extract_community(df:pd.DataFrame, threshold):
     cnt = 0
     ave = 0.0
     for i in range(len(df.columns)):
-        for j in range(len(df.columns)):
+        for j in range(i, len(df.columns)):
             if(i != j):
                 tcr = cr.TwoCowsRelation(df.iloc[1,i], df.iloc[1,j])
                 value = tcr.count_near_distance_time(threshold)
                 matrix[i,j] = value
+                matrix[j,i] = value
                 ave += value # sum
                 cnt += 1
     ave = ave / cnt #average
@@ -53,4 +55,13 @@ def extract_community(df:pd.DataFrame, threshold):
                 edges.append((df.iloc[0, i], df.iloc[0, j]))
     g.add_edges_from(edges)
     partition = community.best_partition(g)
-    return partition
+    return make_node_list(partition)
+
+#コミュニティごとに各牛の個体番号のリストを作成し，コミュニティのリストを返す 
+def make_node_list(partition):
+    nodes_list = []
+    for com in set(partition.values()):
+        nodes = [nodes for nodes in partition.keys() if partition[nodes] == com]
+        nodes_list.append(nodes)
+    print(nodes_list)
+    return nodes_list

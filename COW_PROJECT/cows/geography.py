@@ -79,13 +79,10 @@ def get_distance_and_direction(lat1, lon1, lat2, lon2):
 		lat2, lon2 = translate_rad(lat2, lon2)
 		
 		try:
-			d = r * math.acos(np.round(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1), decimals=14))
-			#tmp = math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
-			#print(d)
+			d = r * math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1))
 		except ValueError:
 			print(lat1, lon1, lat2, lon2)
-			print(np.round(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)), decimals=8)
-			d = 20
+			d = r * math.acos(1.0) #誤差で1を超える場合がある (結果的に距離は0になる)
 		if math.isnan(d):
 			print("距離がNanです")
 			d = 0
