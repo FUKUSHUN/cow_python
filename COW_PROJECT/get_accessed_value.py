@@ -71,8 +71,12 @@ def main(start, end, dic):
 
 if __name__ == '__main__':
     start = datetime.datetime(2018, 10, 1, 0, 0, 0)
+<<<<<<< HEAD
     end = datetime.datetime(2018, 10, 2, 0, 0, 0)
     s = time.time()
+=======
+    end = datetime.datetime(2018, 11, 1, 0, 0, 0)
+>>>>>>> 78d2c76ef422631e937bc1fd32e022dfe9ade9a5
     dic = init(end)
     main(start, end, dic)
     e = time.time()
