@@ -1,5 +1,6 @@
 #-*- encoding:utf-8 -*-
 import math
+import numpy as np
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
@@ -77,7 +78,14 @@ def get_distance_and_direction(lat1, lon1, lat2, lon2):
 		lat1, lon1 = translate_rad(lat1, lon1)
 		lat2, lon2 = translate_rad(lat2, lon2)
 		
-		d = r * math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1))
+		try:
+			d = r * math.acos(np.round(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1), decimals=14))
+			#tmp = math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
+			#print(d)
+		except ValueError:
+			print(lat1, lon1, lat2, lon2)
+			print(np.round(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)), decimals=8)
+			d = 20
 		if math.isnan(d):
 			print("距離がNanです")
 			d = 0
