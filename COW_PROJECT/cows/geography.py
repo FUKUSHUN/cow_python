@@ -34,7 +34,7 @@ def get_cos_sim(g1_after:gpsdata.GpsNmeaData, g2_after:gpsdata.GpsNmeaData, g1:g
 
 	_, g1deg = get_distance_and_direction(lat1, lon1, lat1_a, lon1_a)
 	_, g2deg = get_distance_and_direction(lat2, lon2, lat2_a, lon2_a)
-	_, xdeg = get_distance_and_direction(lat1, lon1, lat2, lon2)
+	_, xdeg = get_distance_and_direction(lat2, lon2, lat1, lon1)
 
 	"""
 	#g2が止まっているときでもg1で代用 (休息中の牛が対象牛に興味を示すという矛盾を抱えているのでペンディング)
@@ -50,7 +50,7 @@ def get_cos_sim(g1_after:gpsdata.GpsNmeaData, g2_after:gpsdata.GpsNmeaData, g1:g
 		return math.cos(get_relative_angle(g1deg, g2deg))
 	else:
 		#角度がおかしな値を出しているとき
-		if(g1deg > 360 or g1deg < 0 or xdeg > 360 or xdeg < 0):
+		if(g2deg > 360 or g2deg < 0 or xdeg > 360 or xdeg < 0):
 			return 0
 		else:
 			return math.cos(get_relative_angle(xdeg, g2deg))
