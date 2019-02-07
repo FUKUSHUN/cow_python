@@ -31,7 +31,7 @@ def init(dt):
     return dic
 
 def main(start, end, dic):
-    filename = "csv/test.csv"
+    filename = "csv/weight.csv"
     fheaderwrite(filename, list(dic.keys()))
     dt = datetime.datetime(start.year, start.month, start.day)
     a = start
@@ -78,7 +78,7 @@ def fwrite(filename, data):
 
 if __name__ == '__main__':
     start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 11, 1, 0, 0, 0)
+    end = datetime.datetime(2018, 11, 30, 0, 0, 0)
     s = time.time()
     dic = init(end)
     main(start, end, dic)
