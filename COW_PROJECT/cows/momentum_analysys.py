@@ -1,15 +1,16 @@
 #-*- encoding:utf-8 -*-
+import numpy as np
 import pandas as pd
+import math
+import statistics
 import re
 import datetime
-import cow.cow as Cow
 import gc
-import cow.geography as geo
+import sys
+import cows.cow as Cow
+import cows.geography as geo
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import sys
-import statistics
-import numpy as np
 
 #1分間の平均を求める (5s間隔なので12回分の平均をとるだけ)
 def mean_per_minutes(t_list, d_list, v_list):
@@ -52,6 +53,36 @@ def median_for_minutes(t_list, d_list, v_list):
 			sum_d = []
 			sum_v = []
 	return new_t_list, new_d_list, new_v_list
+	
+#1分間の総和を求める (5s間隔なので12回分の総和をとるだけ), angleについては角度の平均を求める
+def sum_for_minutes(t_list, d_list, a_list):
+	count = 0
+	new_t_list = []
+	new_d_list = []
+	new_a_list = []
+	sum_d = []
+	sum_cos = []
+	sum_sin = []
+	for (t, d, a) in zip(t_list, d_list, a_list):
+		count += 1
+		sum_d.append(d)
+		if(a != -1):
+			sum_cos.append(math.cos(math.radians(a)))
+			sum_sin.append(math.sin(math.radians(a)))
+		if(count == 12):
+			new_t_list.append(datetime.datetime(t.year, t.month, t.day, t.hour, t.minute, 0))
+			new_d_list.append(sum_d)
+			if(len(sum_cos) != 0):
+				c = sum(sum_cos) / len(sum_cos)
+				s = sum(sum_sin) / len(sum_sin)
+				new_a_list.append(math.degrees(math.atan2(s, c)))
+			else:
+				new_a_list.append(None)
+			count = 0
+			sum_d = []
+			sum_cos = []
+			sum_sin = []
+	return new_t_list, new_d_list, new_a_list
 	
 #1分間の移動平均を求める (5s間隔なので12回分の平均をずらしなが足し合わせる)
 def convo_per_minutes(t_list, d_list, v_list):

@@ -88,10 +88,10 @@ def plot_velocity_data(t_list, d_list, v_list):
 	#ax2.legend(("Distance",), loc='upper left')
 	#plt.savefig(t_list[0].strftime("%y-%m-%d") + "-test.png")
 	plt.show()
-
-def fft(f, dt, fc):
 	N = len(f) #データ数
 	x = np.arange(0, N * dt, dt) #時間軸の作成
+def fft(f, dt, fc):
+
 	fq = np.linspace(0, 1.0/dt, N) # 周波数軸の作成　linspace(開始,終了,分割数)
 	F = np.fft.fft(f) # 高速フーリエ変換(FFT)
 	F_abs = np.abs(F) # FFT結果（複素数）を絶対値に変換
