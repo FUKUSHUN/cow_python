@@ -143,7 +143,7 @@ class CowsRelation:
         評価値は各時刻での被接近度と過去のコミュニティメンバや平均距離から恣意的 (ある思惑によって) に決定した重みによって定量化される
     """
     def calc_evaluation_value(self):
-        if(len(self.member_history) < 20):
+        if(len(self.member_history) < 18):
             return None
         else:
             members = [] #コミュニティメンバのID (一応順番に並べたいので...)
@@ -164,7 +164,24 @@ class CowsRelation:
             value = 0.0
             for c, w in zip(cosines, weights):
                 value += c * w
-            return value
+            return value * 5 #線形補完を行っていないときは前回の位置を引きついだ4回の無駄 (値が0) を含むため
+
+    """
+        評価値 (被接近度) を計算する
+        評価値は被接近度が最大となる牛の被接近度を採用する
+    """
+    def calc_evaluation_value2(self):
+        cosines = [] #コミュニティメンバとの被接近度のリスト
+        for i in range(len(self.cow_data.columns)):
+            if(self.cow_data.iloc[0, i] in self.com_members):
+                tcr = TwoCowsRelation(self.main_cow_data, self.cow_data.iloc[1, i])
+                cosine = tcr.make_cosine_data()
+                cosines.append(cosine)
+        value = 0.0
+        for c in cosines:
+            if(abs(value) < abs(c)):
+                value = c
+        return value * 5
 
     """
         重みの決定を行う
@@ -177,11 +194,11 @@ class CowsRelation:
         sum_d = 0.0
         sum_n = 0.0
         for d, n in zip(d_list, n_list):
-            sum_d += -100 * (1 + math.exp(-1 * (d - 5) / 1 - 1.5)) + 100
-            sum_n += n * 5
+            sum_d += -1 / (1 + math.exp(-1 * (d - 5) / 1 - 1.5)) + 1
+            sum_n += 1 / (1 + math.exp(-1 * (n - 9) / 1.8 - 1.0))
         for d, n in zip(d_list, n_list):
-            wd = -100 * (1 + math.exp(-1 * (d - 5) / 1 - 1.5)) + 100
-            wn = n * 5
+            wd = -1 / (1 + math.exp(-1 * (d - 5) / 1 - 1.5)) + 1
+            wn = 1 / (1 + math.exp(-1 * (n - 9) / 1.8 - 1.0))
             if(sum_d == 0):
                 weights.append(wn / sum_n)
             elif(sum_n == 0):
@@ -191,15 +208,15 @@ class CowsRelation:
         return weights
 
     """
-        シリアル化するファイルに過去20回分のコミュニティ履歴を書き込む
+        シリアル化するファイルに過去18回分のコミュニティ履歴を書き込む
     """
     def pickling(self):
         filepath = self.__picpath + str(self.main_cow_id) + ".pickle"
         with open(filepath, mode = "wb") as f:
-            if(len(self.member_history) < 20):
+            if(len(self.member_history) < 18):
                 temp_history = self.member_history
                 temp_history.append(self.com_members) #リストの一番最後に追加
-            elif(len(self.member_history) >= 20):
+            elif(len(self.member_history) >= 18):
                 temp_history = self.member_history
                 temp_history.pop(0) #リストの一番最初を削除
                 temp_history.append(self.com_members) #リストの一番最後に追加
