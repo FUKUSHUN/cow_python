@@ -19,6 +19,9 @@ class KalmanFilter:
 	def estimateParameter(self, v, w):
 		x0 = np.array([math.log(v), math.log(w)])
 		likelihood = sp.minimize(self.getLogLikelihood, x0, method = 'L-BFGS-B')
+		x, y = likelihood.x
+		self.sig_v2 = math.exp(x)
+		self.sig_w2 = math.exp(y)
 		print(likelihood)
 		
 	def getLogLikelihood(self, params):
@@ -28,12 +31,15 @@ class KalmanFilter:
 		error_list, var_list = self.getErrorSeries()
 		sum = 0.0
 		for i in range(len(error_list)):
-			sum += math.log(var_list[i]) + error_list[i] ** 2 / var_list[i]
+			if(var_list[i] != 0):
+				sum += math.log(var_list[i]) + error_list[i] ** 2 / var_list[i]
+			else:
+				continue
 		return sum / 2
 		
 	def getErrorSeries(self):
 		error_list = [] #誤差の系列
-		var_list = [] #誤差の分散の系列
+		var_list = [] #誤差の分散の系列O
 		
 		x_t = 1.0 #状態推定値の初期値
 		p_t = 1.0 #誤差分散の初期値
@@ -85,7 +91,10 @@ class KalmanFilter:
         y		:float 観測値
 	"""	
 	def filteringStep(self, x_before, p_before, y):
-		g = p_before / (p_before + self.sig_w2) #カルマンゲイン
+		try:
+			g = p_before / (p_before + self.sig_w2) #カルマンゲイン
+		except ZeroDivisionError:
+			g = 0
 		x = x_before + g * (y - x_before) #状態推定値
 		p = (1 - g) * p_before #事後誤差分散
 		return g, x, p

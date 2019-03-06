@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 #1分間の平均を求める (5s間隔なので12回分の平均をとるだけ)
-def mean_per_minutes(t_list, d_list, v_list):
+def mean_per_minutes(t_list, d_list, v_list, interval = 12):
 	count = 0
 	new_t_list = []
 	new_d_list = []
@@ -24,7 +24,7 @@ def mean_per_minutes(t_list, d_list, v_list):
 		count += 1
 		sum_d += d
 		sum_v += v
-		if(count == 12):
+		if(count == interval):
 			new_t_list.append(datetime.datetime(t.year, t.month, t.day, t.hour, t.minute, 0))
 			new_d_list.append(sum_d / count)
 			new_v_list.append(sum_v / count)
@@ -34,7 +34,7 @@ def mean_per_minutes(t_list, d_list, v_list):
 	return new_t_list, new_d_list, new_v_list
 
 #1分間の中央値を求める (5s間隔なので12個データの中央値を求めるだけ)
-def median_for_minutes(t_list, d_list, v_list):
+def median_for_minutes(t_list, d_list, v_list, interval = 12):
 	count = 0
 	new_t_list = []
 	new_d_list = []
@@ -45,7 +45,7 @@ def median_for_minutes(t_list, d_list, v_list):
 		count += 1
 		sum_d.append(d)
 		sum_v.append(v)
-		if(count == 12):
+		if(count == interval):
 			new_t_list.append(datetime.datetime(t.year, t.month, t.day, t.hour, t.minute, 0))
 			new_d_list.append(statistics.median(sum_d))
 			new_v_list.append(statistics.median(sum_v))
@@ -55,7 +55,7 @@ def median_for_minutes(t_list, d_list, v_list):
 	return new_t_list, new_d_list, new_v_list
 	
 #1分間の総和を求める (5s間隔なので12回分の総和をとるだけ), angleについては角度の平均を求める
-def sum_for_minutes(t_list, d_list, a_list):
+def sum_for_minutes(t_list, d_list, a_list, interval = 12):
 	count = 0
 	new_t_list = []
 	new_d_list = []
@@ -69,7 +69,7 @@ def sum_for_minutes(t_list, d_list, a_list):
 		if(a != -1):
 			sum_cos.append(math.cos(math.radians(a)))
 			sum_sin.append(math.sin(math.radians(a)))
-		if(count == 12):
+		if(count == interval):
 			new_t_list.append(datetime.datetime(t.year, t.month, t.day, t.hour, t.minute, 0))
 			new_d_list.append(sum_d)
 			if(len(sum_cos) != 0):
@@ -85,7 +85,7 @@ def sum_for_minutes(t_list, d_list, a_list):
 	return new_t_list, new_d_list, new_a_list
 	
 #1分間の移動平均を求める (5s間隔なので12回分の平均をずらしなが足し合わせる)
-def convo_per_minutes(t_list, d_list, v_list):
+def convo_per_minutes(t_list, d_list, v_list, interval = 12):
 	count = 0
 	new_t_list = []
 	new_d_list = []
@@ -95,13 +95,13 @@ def convo_per_minutes(t_list, d_list, v_list):
 	for (t, d, v) in zip(t_list, d_list, v_list):
 		sum_d.append(d)
 		sum_v.append(v)
-		if(count < 12):
+		if(count < interval):
 			count += 1
 			new_t_list.append(t)
 			new_d_list.append(sum(sum_d) / count)
 			new_v_list.append(sum(sum_v) / count)
 			
-		elif(count == 12):
+		elif(count == interval):
 			sum_d = sum_d[(-1 * count):]
 			sum_v = sum_v[(-1 * count):]
 			new_t_list.append(t)

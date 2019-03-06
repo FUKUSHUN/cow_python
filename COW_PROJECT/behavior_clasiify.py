@@ -11,6 +11,7 @@ import cows.geography as geo
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import cows.momentum_analysys as ma
+import image.adjectory_image as disp
 
 #データベースから指定牛の指定期間のデータを読み込む (元データ (1 Hz) を5sごとに戻す処理も含む)
 def read_gps(cow_id, start, end):
@@ -63,11 +64,11 @@ def select_use_time(t_list, d_list, v_list, a_list):
 	angle_tmp_list = []
 	for (t, d, v, a) in zip(t_list, d_list, v_list, a_list):
 		t = t + datetime.timedelta(hours = 9)
-		if(t.hour < 9 or 12 < t.hour):
+		if(t.hour < 18 and 15 < t.hour):
 			time_tmp_list.append(t)
-			distance_tmp_list.append(d) #1sあたりに直しているだけ
+			distance_tmp_list.append(d) 
 			velocity_tmp_list.append(v * knot) #単位を[m/s]に直しているだけ
-			angle_tmp_list.append(a) #1sあたりに直しているだけ
+			angle_tmp_list.append(a)
 	return time_tmp_list, distance_tmp_list, velocity_tmp_list, angle_tmp_list
 	
 #プロットする
@@ -106,16 +107,75 @@ def plot_velocity_data(t_list, v_list):
 	#plt.savefig(t_list[0].strftime("%y-%m-%d") + "-test.png")
 	plt.show()
 
+#散布図形式でプロットする
+def scatter_plot(t_list, d_list, c_list):
+	x_list = []
+	for i in range(len(t_list)):
+		x_list.append(i)
+	x = np.array(x_list)
+	y = np.array(d_list)
+	c = np.array(c_list)
+	fig = plt.figure()
+	ax = fig.add_subplot(1,1,1)
+	ax.scatter(x, y, c = c, s = 1)
+	plt.show()
+
+#休息時の速度を一つに折りたたむ
+def zip_rest(t_list, v_list, threshold = 0.069):
+	lock = False
+	tmp_list = [] # 休息時の平均速度を求めるためのリスト 
+	tmp_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
+	tmp_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
+	start_list = [] # 始まりを格納 (未使用)
+	end_list = [] # 終わりを格納 (未使用)
+	for time, velocity in zip(t_list, v_list):
+		if(not(lock)):
+			if(velocity < threshold):
+				start_list.append(time)
+				lock = True
+				tmp_list = []
+				tmp_list.append(velocity)
+			else:
+				tmp_t_list.append(time)
+				tmp_v_list.append(velocity)
+		else:
+			if(velocity < threshold):
+				tmp_list.append(velocity)
+				end = time
+			else:
+				end_list.append(end)
+				tmp_t_list.append(end)
+				tmp_t_list.append(time)
+				tmp_v_list.append(sum(tmp_list) / len(tmp_list))
+				tmp_v_list.append(velocity)
+				lock = False
+	return tmp_t_list, tmp_v_list
+
+#移動距離に応じて分類する
+def calassify_distance(d_list, graze = 0.069, walk = 0.18):
+	data_list = []
+	for data in d_list:
+		if(data < graze):
+			data_list.append("red")
+		elif(data < walk):
+			data_list.append("green")
+		else:
+			data_list.append("blue")
+	return data_list
 
 if __name__ == '__main__':
-	start = datetime.datetime(2018, 2, 15, 0, 0, 0)
-	end = datetime.datetime(2018, 2, 16, 0, 0, 0)
-	time_list, distance_list, velocity_list, angle_list = read_gps(20283, start, end) #2次元リスト (1日分 * 日数分)
+	display = disp.Adjectory(False)
+	display.write()
+	start = datetime.datetime(2018, 12, 22, 0, 0, 0)
+	end = datetime.datetime(2018, 12, 23, 0, 0, 0)
+	time_list, distance_list, velocity_list, angle_list = read_gps(20261, start, end) #2次元リスト (1日分 * 日数分)
 	for (t_list, d_list, v_list, a_list) in zip(time_list, distance_list, velocity_list, angle_list):
 		print(len(t_list))
 		t_list, d_list, v_list, a_list = select_use_time(t_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
-		print(len(t_list))
-		t_list, d_list, a_list = ma.sum_for_minutes(t_list, d_list, a_list) #移動距離 (1分間)
-		print(len(t_list))
-		plot_distance_data(t_list, d_list, a_list) #plot
-	
+		#print(len(t_list))
+		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3)
+		t_list, v_list = zip_rest(t_list, v_list)
+		c_list = calassify_distance(v_list)
+		scatter_plot(t_list, v_list, c_list)
+		#print(len(t_list))
+		#plot_distance_data(t_list, d_list, a_list) #plot
