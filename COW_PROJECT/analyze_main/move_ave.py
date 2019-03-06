@@ -2,6 +2,7 @@
 import csv
 import pandas as pd
 import numpy as np
+import datetime
 
 def read_values(filepath):
     count = 18 #何個分の移動平均をとるか
@@ -32,18 +33,13 @@ def write_values(filename, header, index_list, data_list):
         writer = csv.writer(f, lineterminator='\n')
         writer.writerow(header)
         for time, row in zip(index_list, data_list):
+            time_dt = datetime.datetime.strptime(time, "%Y/%m/%d %H:%M:%S") + datetime.timedelta(hours = 9)
+            time = time_dt.strftime("%Y/%m/%d %H:%M:%S")
             writer.writerow([time] + row)
     return
 
-def make_one_month_training(filepath:str, data):
-    with open(filepath, mode = "a") as f:
-        writer = csv.writer(f, lineterminator='\n')
-        for row in data:
-            writer.writerow(row)
-    return
-
 if __name__ == '__main__':
-    r_filename = "../csv/d_weight.csv"
-    w_filename = "../csv/d_weight_m.csv"
+    r_filename = "../csv/August.csv"
+    w_filename = "../csv/gps/August_m.csv"
     header, times, values = read_values(r_filename)
     write_values(w_filename, header, times, values)
