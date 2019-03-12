@@ -62,20 +62,22 @@ def read_gps(cow_id, start, end):
 	return time_list, position_list, distance_list, velocity_list, angle_list
 
 #データの解析に使用する時間分を抽出する
-def select_use_time(t_list, d_list, v_list, a_list):
+def select_use_time(t_list, p_list, d_list, v_list, a_list):
 	knot = 0.514444 # 1 knot = 0.51444 m/s
 	time_tmp_list = []
+	position_tmp_list = []
 	distance_tmp_list = []
 	velocity_tmp_list = []
 	angle_tmp_list = []
-	for (t, d, v, a) in zip(t_list, d_list, v_list, a_list):
+	for (t, p, d, v, a) in zip(t_list, p_list, d_list, v_list, a_list):
 		t = t + datetime.timedelta(hours = 9)
 		if(t.hour < 9 or 12 < t.hour):
 			time_tmp_list.append(t)
+			position_tmp_list.append(p)
 			distance_tmp_list.append(d) 
 			velocity_tmp_list.append(v * knot) #単位を[m/s]に直しているだけ
 			angle_tmp_list.append(a)
-	return time_tmp_list, distance_tmp_list, velocity_tmp_list, angle_tmp_list
+	return time_tmp_list, position_tmp_list, distance_tmp_list, velocity_tmp_list, angle_tmp_list
 	
 #プロットする
 def plot_distance_data(t_list, d_list, a_list):
@@ -132,8 +134,8 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 	tmp_list = [] # 休息時の平均速度を求めるためのリスト 
 	tmp_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
 	tmp_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
-	start_list = [] # 始まりを格納 (未使用)
-	end_list = [] # 終わりを格納 (未使用)
+	start_list = [] # 始まりを格納
+	end_list = [] # 終わりを格納
 	for time, velocity in zip(t_list, v_list):
 		if(not(is_rest)):
 			# 休息の始まり
@@ -161,7 +163,7 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 				tmp_v_list.append(velocity)
 				is_rest = False
 	if(len(start_list) == len(end_list) + 1): # 最後が休息だった場合，最後のセグメントを格納する
-		end_list.append(t_list[len(v_list) - 1])
+		end_list.append(t_list[len(t_list) - 1])
 		tmp_t_list.append(t_list[len(t_list) - 1])
 		tmp_v_list.append(sum(tmp_list) / len(tmp_list))
 	return tmp_t_list, tmp_v_list, start_list, end_list
@@ -184,7 +186,7 @@ def determin_center(t_list, p_list, s_list, e_list):
 			if (start <= time and time <= end) :
 				lats.append(p_list[i][0])
 				lons.append(p_list[i][1])
-			elif (end <= time) :
+			elif (end < time) :
 				break
 		if(len(lats) != 0 and len(lons) != 0):
 			lat = sum(lats) / len(lats)
@@ -211,17 +213,16 @@ def calassify_distance(v_list, graze = 0.069, walk = 0.18):
 	return data_list
 
 if __name__ == '__main__':
-	display = disp.Adjectory(True)
 	start = datetime.datetime(2018, 12, 22, 0, 0, 0)
 	end = datetime.datetime(2018, 12, 23, 0, 0, 0)
-	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20299, start, end) #2次元リスト (1日分 * 日数分)
+	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20261, start, end) #2次元リスト (1日分 * 日数分)
 	for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
 		print(len(t_list))
-		t_list, d_list, v_list, a_list = select_use_time(t_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3)
 		t_list, v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
 		g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
-		display = disp.Adjectory(True)
+		display = disp.Adjectory(False)
 		display.write(g_list) # 休息の場所の分布のプロット
 		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
