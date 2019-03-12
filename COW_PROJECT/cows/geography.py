@@ -75,8 +75,10 @@ def get_distance_and_direction(lat1, lon1, lat2, lon2):
 		#赤道半径 [m] (地球を球面と仮定して計算している)
 		r = 6378137
 		#弧度法 ([rad]) に変換
-		lat1, lon1 = translate_rad(lat1, lon1)
-		lat2, lon2 = translate_rad(lat2, lon2)
+		lat1, lon1 = translate(lat1, lon1)
+		lat2, lon2 = translate(lat2, lon2)
+		lat1, lon1 = deg_to_rad(lat1, lon1)
+		lat2, lon2 = deg_to_rad(lat2, lon2)
 		
 		try:
 			d = r * math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1))
@@ -101,12 +103,16 @@ def get_relative_angle(a, b):
 		return -1
 	return math.radians(abs(a - b)) # the return x will become 0 < x < 2PI
 	
-#経度・緯度をdddmm.mmmm表記をddd.dddd形式に変換し，弧度法 ([rad]) に変換する
-def translate_rad(lat, lon):
+#経度・緯度をdddmm.mmmm表記をddd.dddd形式に変換する (他のファイルから呼び出されることもあり)
+def translate(lat, lon):
 	lat_d = lat // 100
 	lon_d = lon // 100
 	lat_m = (lat % 100) / 60
 	lon_m = (lon % 100) / 60
-	lat = math.radians(lat_d + lat_m)
-	lon = math.radians(lon_d + lon_m)
+	return lat_d + lat_m, lon_d + lon_m
+
+#ddd.dddd度で表される度数法を弧度法に変換する
+def deg_to_rad(lat, lon):
+	lat = math.radians(lat)
+	lon = math.radians(lon)
 	return lat, lon
