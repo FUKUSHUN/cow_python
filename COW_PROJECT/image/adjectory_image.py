@@ -19,12 +19,27 @@ class Adjectory:
             self.image = Image.new('RGBA',self.__size,(255,255,255,255))
     
     """
+    移動の軌跡を描画する
     Parameter
-	    g_list	:(lat, lon, time) の3要素の2次元リスト
-    """    
-    def write(self, g_list):
+        g_list: (lat, lon) の2要素の2次元リスト
+    """
+    def plot_moving_ad(self, g_list):
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in g_list:
+            self.draw_circle(draw, pos[0], pos[1], 1)
+            #print(pos[0], pos[1])
+        image_list = np.asarray(self.image) # 画像をarrayに変換
+        plt.imshow(image_list) # 貼り付け
+
+    """
+    休息の場所をプロットする
+    Parameter
+	    rest_g_list	:(lat, lon, time) の3要素の2次元リスト
+    """
+    def write(self, rest_g_list):
+        draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
+        for pos in rest_g_list:
+            #if(pos[2] > 5):
             self.draw_circle(draw, pos[0], pos[1], pos[2])
             #print(pos[0], pos[1], pos[2])
         image_list = np.asarray(self.image) # 画像をarrayに変換

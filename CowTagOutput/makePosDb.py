@@ -16,7 +16,7 @@ class PosDb:
 	def __init__(self, cId, date):
 		self.cowId = cId
 		self.date = date
-		f = open("Record/path.txt", "r", encoding='utf-8') #ここにそのパスが書いてあるのでローカルで設定すること
+		f = open("Record/path.txt", "r", encoding='utf-8-sig') #ここにそのパスが書いてあるのでローカルで設定すること
 		self.parentPath = f.read()
 		f.close()
 
@@ -30,6 +30,7 @@ class PosDb:
 		c.execute("CREATE TABLE `"  + str(self.cowId) + "`(time CHAR(20), LATITUDE DOUBLE, LONGITUDE DOUBLE, VELOCITY DOUBLE)")
 		for index, row in df.iterrows():
 			if '$GPRMC' in index:
+				print(self.gpsId, "\n", row)
 				time = row[0]
 				lat = row[1]
 				lon = row[2]
@@ -40,8 +41,8 @@ class PosDb:
 				c.execute(sql)
 		conn.commit()
 		itr = c.execute("SELECT * FROM `" + str(self.cowId) + "`")
-		for row in itr:
-			print(row)
+		#for row in itr:
+			#print(row)
 		conn.close()
 		
 	#牛の個体番号から対応する牛のgpsIdを取得する
@@ -55,10 +56,11 @@ class PosDb:
 	def __readCsv(self):
 		#csv読み込み (見つからない場合のエラー回避)
 		try:
-			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "/" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'),index_col = 0, engine='python')
+			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "\\" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'),index_col = 0, engine='python')
 			df = df.fillna(0) #欠損等は0で補完
 			return df
 		except FileNotFoundError:
+			#print(self.parentPath+ str(self.gpsId) + "\\" + str(self.date) + ".txt")
 			df = pd.DataFrame([])
 			return df
 		except pd.errors.ParserError:
@@ -67,11 +69,11 @@ class PosDb:
 		
     #日付をdatetimeにして返す
 	def __transDateTime(self,time, date):
-		timeList = self.__devideEachDigit(time)
+		timeList = self.__devideEachDigit(int(float(time))) #int(("100.0")) エラー回避
 		hour = int(timeList[2])
 		minu = int(timeList[1])
 		sec = int(timeList[0])
-		dateList = self.__devideEachDigit(date)
+		dateList = self.__devideEachDigit(int(float(date))) #int(("100.0")) エラー回避
 		year = int(2000 + dateList[2])
 		month = int(dateList[1])
 		day = int(dateList[0])
@@ -87,7 +89,6 @@ class PosDb:
 			except TypeError:
 				print(num)
 			num = num // 100
-
 		return array
         
 	#ddmmyyをyymmddに変換する
