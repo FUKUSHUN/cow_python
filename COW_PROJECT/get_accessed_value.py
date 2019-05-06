@@ -10,7 +10,10 @@ import datetime
 import gc
 import csv
 import time
-
+"""
+被接近度（コサイン類似度）を算出するプログラム
+ここでは移動平均を算出する前のファイルを出力するので，移動平均を出すにはanalyze_main/move_ave.pyを実行すること
+"""
 def init(dt):
     #シリアライズファイルの初期化
     shutil.rmtree("serial")
@@ -27,10 +30,11 @@ def init(dt):
     #各牛に列番号を割り振り
     dic = {}
     for i, num in enumerate(cow_list):
-            dic[int(num)] = i
+        dic[int(num)] = i
     return dic
 
 def main(start, end, dic):
+    print(dic)
     filename = "csv/weight.csv"
     fheaderwrite(filename, list(dic.keys()))
     dt = datetime.datetime(start.year, start.month, start.day)
@@ -77,8 +81,8 @@ def fwrite(filename, data):
     return
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 11, 30, 0, 0, 0)
+    start = datetime.datetime(2019, 2, 21, 0, 0, 0)
+    end = datetime.datetime(2019, 3, 14, 0, 0, 0)
     s = time.time()
     dic = init(end)
     main(start, end, dic)

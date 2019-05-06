@@ -36,7 +36,7 @@ class TwoCowsRelation:
             if(t == self.cow_gps_list2[i2].get_datetime()):
                 lat1, lon1, _ = self.cow_gps_list1[i1].get_gps_info(t)
                 lat2, lon2, _ = self.cow_gps_list2[i2].get_gps_info(self.cow_gps_list2[i2].get_datetime())
-                d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2)
+                d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, False)
                 i1 += 1
                 i2 += 1
                 distance_list.append(d) #左に時刻，右に距離
@@ -99,7 +99,7 @@ class TwoCowsRelation:
             if(t == self.cow_gps_list2[i2].get_datetime()):
                 lat1, lon1, _ = self.cow_gps_list1[i1].get_gps_info(t)
                 lat2, lon2, _ = self.cow_gps_list2[i2].get_gps_info(self.cow_gps_list2[i2].get_datetime())
-                d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2)
+                d, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, False)
                 i1 += 1
                 i2 += 1
                 if(d < threshold):

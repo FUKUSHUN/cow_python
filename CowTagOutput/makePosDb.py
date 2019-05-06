@@ -35,10 +35,13 @@ class PosDb:
 				lat = row[1]
 				lon = row[2]
 				vel = row[3]
-				date = self.__transToYYMMDD(int(row[4]))
-				dt = self.__transDateTime(time, date)
-				sql = "INSERT INTO `" + str(self.cowId) + "`VALUES(" + "'" + dt.strftime("%Y/%m/%d %H:%M:%S") + "'" + "," + "'" + str(lat) + "'" + "," + "'" + str(lon) + "'" + "," + "'" + str(vel) + "'" + ")"
-				c.execute(sql)
+				try:
+					date = self.__transToYYMMDD(int(row[4]))
+					dt = self.__transDateTime(time, date)
+					sql = "INSERT INTO `" + str(self.cowId) + "`VALUES(" + "'" + dt.strftime("%Y/%m/%d %H:%M:%S") + "'" + "," + "'" + str(lat) + "'" + "," + "'" + str(lon) + "'" + "," + "'" + str(vel) + "'" + ")"
+					c.execute(sql)
+				except ValueError:
+					print("makePosDb: 44行目でエラー")
 		conn.commit()
 		itr = c.execute("SELECT * FROM `" + str(self.cowId) + "`")
 		#for row in itr:

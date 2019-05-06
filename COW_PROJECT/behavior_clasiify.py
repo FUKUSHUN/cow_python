@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 import statistics
+import csv
 import re
 import datetime
 import gc
@@ -40,7 +41,7 @@ def read_gps(cow_id, start, end):
 				if g_before is not None:
 					lat1, lon1, vel1 = g_before.get_gps_info(g_before.get_datetime())
 					lat2, lon2, vel2 = g.get_gps_info(g.get_datetime())
-					distance, angle = geo.get_distance_and_direction(lat1, lon1, lat2, lon2)
+					distance, angle = geo.get_distance_and_direction(lat1, lon1, lat2, lon2, False)
 					#print(g.get_datetime().strftime("%Y/%m/%d %H:%M:%S") + " : ", lat2 , ",", lon2)
 					t_list.append(g.get_datetime()) #時間の格納
 					pos_list.append(geo.translate(lat2, lon2)) #位置情報の格納
@@ -145,7 +146,7 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 				end = time
 				tmp_list = []
 				tmp_list.append(velocity)
-			# 採食 or 歩行
+			# 採食or歩行
 			else:
 				tmp_t_list.append(time)
 				tmp_v_list.append(velocity)
@@ -194,6 +195,62 @@ def determin_center(t_list, p_list, s_list, e_list):
 			center_list.append((lat, lon, (end - start).total_seconds() / 60)) # (lat, lon, 滞在時間 [minutes])
 	return center_list
 
+#特徴をCSVにして出力する (圧縮が既に行われている前提) 
+"""
+Parameter
+	t_list	:時間のリスト
+	p_list	:位置情報のリスト
+	s_list, e_list	:それぞれ始まりと終わりを格納したリスト
+"""
+def output_feature_info(t_list, p_list, s_list, e_list):
+	is_first = True
+	feature_list =[]
+	
+	#####登録情報#####
+	previous_lat = 0.0
+	previous_lon = 0.0
+	lat = 0.0
+	lon = 0.0
+	previous_rest_time = None #前の休息の時間
+	previous_rest_end = None #前の休息の終わりの時刻
+	rest_time = None #後の休息の時間
+	rest_start = None #後の休息の始まりの時間
+	moving_distance = None #休息間の距離
+	moving_direction = None #次の休息への移動方向
+	interval_between_rest = None #休息間の時間間隔
+
+	#####登録#####
+	g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
+	for start, end, pos in zip(s_list, e_list, g_list):
+		if (is_first) :
+			previous_lat = pos[0]
+			previous_lon = pos[1]
+			previous_rest_time = pos[2]
+			previous_rest_end = end
+			is_first = False
+		else:
+			if (pos[2] > 1) : # 1分以上の休息に対して
+				lat = pos[0]
+				lon = pos[1]
+				rest_time = pos[2]
+				rest_start = start
+				moving_distance, moving_direction = geo.get_distance_and_direction(previous_lat, previous_lon, lat, lon, True) #休息間の距離
+				interval_between_rest = (rest_start - previous_rest_end).total_seconds() / 60 #休息間の時間間隔 [minutes]
+				###登録###
+				feature_list.append([previous_rest_end, previous_lat, previous_lon, previous_rest_time, rest_start, lat, lon, rest_time, moving_distance, moving_direction, interval_between_rest])
+				###引継###
+				previous_lat = lat
+				previous_lon = lon
+				previous_rest_time = rest_time
+				previous_rest_end = end
+	#####出力#####
+	with open("行動解析/feature.csv", "w", newline="") as f:
+		writer = csv.writer(f)
+		writer.writerow(("Last end time", "Last latitude", "Last longitude", "last continuous time", "Start time", "Latitude", "Longitude", "Continuous time", "Moving distance", "Moving direction", "Interval between rests"))
+		for feature in feature_list:
+			writer.writerow(feature)
+	return
+
 #移動速度に応じて分類する
 """
 Parameter
@@ -213,16 +270,24 @@ def calassify_distance(v_list, graze = 0.069, walk = 0.18):
 	return data_list
 
 if __name__ == '__main__':
-	start = datetime.datetime(2018, 12, 22, 0, 0, 0)
-	end = datetime.datetime(2018, 12, 23, 0, 0, 0)
-	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20261, start, end) #2次元リスト (1日分 * 日数分)
+	start = datetime.datetime(2018, 2, 22, 0, 0, 0)
+	end = datetime.datetime(2018, 2, 23, 0, 0, 0)
+	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20283, start, end) #2次元リスト (1日分 * 日数分)
 	for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
 		print(len(t_list))
 		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
-		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3)
-		t_list, v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
-		g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
-		display = disp.Adjectory(False)
-		display.write(g_list) # 休息の場所の分布のプロット
+		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
+		
 		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
+
+		zip_t_list, v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
+		g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
+		output_feature_info(t_list, p_list, s_list, e_list) #特徴を出力する
+		#display = disp.Adjectory(True)
+		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
+		display = disp.Adjectory(True)
+		display.plot_rest_place(g_list) # 休息の場所の分布のプロット
+
+		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
+		scatter_plot(zip_t_list, v_list, c_list) #時系列で速さの散布図を表示
