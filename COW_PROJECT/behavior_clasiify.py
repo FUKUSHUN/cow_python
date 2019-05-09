@@ -14,7 +14,9 @@ import matplotlib.dates as mdates
 import math
 import cows.momentum_analysys as ma
 import image.adjectory_image as disp
-
+"""
+えげつないスパゲッティです
+"""
 #データベースから指定牛の指定期間のデータを読み込む (元データ (1 Hz) を5s (0.2Hz) に戻す処理も含む)
 def read_gps(cow_id, start, end):
 	# データを読み込み，それぞれのリストを作成 (情報ごとのリストにするか時間ごとのリストのリストにするかは場合による) 
@@ -130,11 +132,21 @@ def scatter_plot(t_list, d_list, c_list):
 	plt.show()
 
 #休息時の速度を一つに折りたたむ
+"""
+Parameter
+	t_list	:圧縮されていない時間のリスト
+	v_list	:圧縮されていない速度のリスト
+return
+	update_t_list	:再編した時間のリスト
+	update_v_list	:再編した速度のリスト
+	start_list	:休息が始まった時間を格納したリスト
+	end_list	:休息が終了した時間を格納したリスト
+"""
 def zip_rest(t_list, v_list, threshold = 0.069):
 	is_rest = False
 	tmp_list = [] # 休息時の平均速度を求めるためのリスト 
-	tmp_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
-	tmp_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
+	update_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
+	update_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
 	start_list = [] # 始まりを格納
 	end_list = [] # 終わりを格納
 	for time, velocity in zip(t_list, v_list):
@@ -148,8 +160,8 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 				tmp_list.append(velocity)
 			# 採食or歩行
 			else:
-				tmp_t_list.append(time)
-				tmp_v_list.append(velocity)
+				update_t_list.append(time)
+				update_v_list.append(velocity)
 		else:
 			# 休息の続き
 			if(velocity < threshold):
@@ -158,16 +170,16 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 			# 休息の終わり
 			else:
 				end_list.append(end)
-				tmp_t_list.append(end)
-				tmp_t_list.append(time)
-				tmp_v_list.append(sum(tmp_list) / len(tmp_list))
-				tmp_v_list.append(velocity)
+				update_t_list.append(end)
+				update_t_list.append(time)
+				update_v_list.append(sum(tmp_list) / len(tmp_list))
+				update_v_list.append(velocity)
 				is_rest = False
 	if(len(start_list) == len(end_list) + 1): # 最後が休息だった場合，最後のセグメントを格納する
 		end_list.append(t_list[len(t_list) - 1])
-		tmp_t_list.append(t_list[len(t_list) - 1])
-		tmp_v_list.append(sum(tmp_list) / len(tmp_list))
-	return tmp_t_list, tmp_v_list, start_list, end_list
+		update_t_list.append(t_list[len(t_list) - 1])
+		update_v_list.append(sum(tmp_list) / len(tmp_list))
+	return update_t_list, update_v_list, start_list, end_list
 
 #重心を求める (休息時の座標の重心を求めたい．また，休息していた時間も合わせた形で返したい)
 """
@@ -195,6 +207,40 @@ def determin_center(t_list, p_list, s_list, e_list):
 			center_list.append((lat, lon, (end - start).total_seconds() / 60)) # (lat, lon, 滞在時間 [minutes])
 	return center_list
 
+
+#圧縮した休息に合わせて距離・角度・位置のリストを再編する
+"""
+Parameter
+	t_list	:圧縮されていない時間のリスト
+	p_list	:圧縮されていない位置情報のリスト
+	d_list	:圧縮されていない距離のリスト
+	a_list	:圧縮されていない角度のリスト
+	s_list, e_list	:それぞれ休息の始まりと終わりを格納したリスト
+	zipped_g_list	:圧縮された位置情報のリスト(lat, lon 滞在時間)を含むdetermin_centerで求めています
+return
+	updated_zipped_list
+"""
+def remake_gps_list(t_list, p_list, d_list, a_list, start_list, end_list, zipped_g_list, zipped_v_list):
+	updated_zipped_list = []
+	index = 0
+	previous_rest_end = t_list[0]
+	rest_start = start_list[index]
+	rest_end = end_list[index]
+	for time, p, d, a in zip(t_list, p_list, d_list, a_list):
+		if(rest_end < time):
+			index += 1
+			if(len(start_list) <= index):
+				break
+			else:
+				previous_rest_end = end_list[index - 1]
+				rest_start = start_list[index]
+				rest_end = end_list[index]
+		#休息中でないところには通常通り登録する
+		if((previous_rest_end < time or previous_rest_end == t_list[0]) and time < rest_start):
+			updated_zipped_list.append((time, p, d, a))
+		elif(start <= time and time <= end):
+			
+
 #特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
 Parameter
@@ -213,8 +259,8 @@ def output_feature_info(t_list, p_list, s_list, e_list):
 	lon = 0.0
 	previous_rest_time = None #前の休息の時間
 	previous_rest_end = None #前の休息の終わりの時刻
-	rest_time = None #後の休息の時間
-	rest_start = None #後の休息の始まりの時間
+	rest_time = None #現在の休息の時間
+	rest_start = None #現在の休息の始まりの時間
 	moving_distance = None #休息間の距離
 	moving_direction = None #次の休息への移動方向
 	interval_between_rest = None #休息間の時間間隔
@@ -229,13 +275,15 @@ def output_feature_info(t_list, p_list, s_list, e_list):
 			previous_rest_end = end
 			is_first = False
 		else:
-			if (pos[2] > 1) : # 1分以上の休息に対して
+			#if (pos[2] > 1) : # 1分以上の休息に対して
 				lat = pos[0]
 				lon = pos[1]
 				rest_time = pos[2]
 				rest_start = start
 				moving_distance, moving_direction = geo.get_distance_and_direction(previous_lat, previous_lon, lat, lon, True) #休息間の距離
 				interval_between_rest = (rest_start - previous_rest_end).total_seconds() / 60 #休息間の時間間隔 [minutes]
+				sum_distance = 0.0 #休息間の道のり(各サンプリング区間の距離の総和)
+
 				###登録###
 				feature_list.append([previous_rest_end, previous_lat, previous_lon, previous_rest_time, rest_start, lat, lon, rest_time, moving_distance, moving_direction, interval_between_rest])
 				###引継###
@@ -243,6 +291,7 @@ def output_feature_info(t_list, p_list, s_list, e_list):
 				previous_lon = lon
 				previous_rest_time = rest_time
 				previous_rest_end = end
+
 	#####出力#####
 	with open("行動解析/feature.csv", "w", newline="") as f:
 		writer = csv.writer(f)
@@ -250,6 +299,7 @@ def output_feature_info(t_list, p_list, s_list, e_list):
 		for feature in feature_list:
 			writer.writerow(feature)
 	return
+
 
 #移動速度に応じて分類する
 """
@@ -278,16 +328,17 @@ if __name__ == '__main__':
 		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
 		
-		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
+		c_list = calassify_distance(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 
-		zip_t_list, v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
+		zipped_t_list, zipped_v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
+		remake_gps_list(t_list, p_list, d_list, a_list)
 		g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
-		output_feature_info(t_list, p_list, s_list, e_list) #特徴を出力する
+		output_feature_info(t_list, p_list, s_list, e_list) # 特徴を出力する
 		#display = disp.Adjectory(True)
 		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
 		display = disp.Adjectory(True)
 		display.plot_rest_place(g_list) # 休息の場所の分布のプロット
 
 		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
-		scatter_plot(zip_t_list, v_list, c_list) #時系列で速さの散布図を表示
+		scatter_plot(zipped_t_list, zipped_v_list, c_list) # 時系列で速さの散布図を表示
