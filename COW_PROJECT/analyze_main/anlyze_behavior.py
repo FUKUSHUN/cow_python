@@ -9,18 +9,25 @@ def show_3d_plot(df):
     ax = mpl3d.Axes3D(fig)
 
     # 軸ラベルの設定
-    ax.set_xlabel("Last time")
-    ax.set_ylabel("Current time")
-    ax.set_zlabel("distance")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Distance")
+    ax.set_zlabel("Interval")
     #ax.set_zlabel("interval")
 
+    a = translate_dt_to_int(df['A'])
     # 散布図作成
-    ax.plot(df['D'], df['H'], df['I'], "o", color="#00aa00", ms=4, mew=0.5)
+    ax.plot(a, df['I'], df['K'], "o", color="#00aa00", ms=4, mew=0.5)
     #ax.plot(df['D'], df['H'], df['K'], "o", color="#00aa00", ms=4, mew=0.5)
 
     plt.show()
 
+#datetime型のデータを整数型に直して系列を作成する
+def translate_dt_to_int(dt_list):
+    i_list = []
+    for i, dt in enumerate(dt_list):
+        i_list.append(i)
+    return pd.Series(i_list)
 
 if __name__ == '__main__':
-    df = pd.read_csv(filepath_or_buffer = "行動解析/feature.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [3,7,8,10], names=('D', 'H', 'I', 'K'))
+    df = pd.read_csv(filepath_or_buffer = "feature.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,7,8,10], names=('A', 'D', 'H', 'I', 'K'))
     show_3d_plot(df)
