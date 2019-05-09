@@ -39,7 +39,7 @@ def write_values(filename, header, index_list, data_list):
     return
 
 if __name__ == '__main__':
-    r_filename = "../csv/August.csv"
-    w_filename = "../csv/gps/August_m.csv"
+    r_filename = "csv/weight.csv"
+    w_filename = "csv/weight_m.csv"
     header, times, values = read_values(r_filename)
     write_values(w_filename, header, times, values)

@@ -16,7 +16,7 @@ import gps.gps_nmea_data_list as gpslist #自作クラス
 def get_absolute_speed(g1:gpsdata.GpsNmeaData, g2:gpsdata.GpsNmeaData):
 	lat1, lon1, _ = g1.get_gps_info(g1.get_datetime())
 	lat2, lon2, _ = g2.get_gps_info(g2.get_datetime())
-	d, a = get_distance_and_direction(lat1, lon1, lat2, lon2)
+	d, a = get_distance_and_direction(lat1, lon1, lat2, lon2, False)
 	return d / (g2.get_datetime() - g1.get_datetime()).total_seconds(), a
 
 """
@@ -32,9 +32,9 @@ def get_cos_sim(g1_after:gpsdata.GpsNmeaData, g2_after:gpsdata.GpsNmeaData, g1:g
 	lat2_a, lon2_a, _ = g2_after.get_gps_info(g2_after.get_datetime())
 	lat2, lon2, _ = g2.get_gps_info(g2.get_datetime())
 
-	_, g1deg = get_distance_and_direction(lat1, lon1, lat1_a, lon1_a)
-	_, g2deg = get_distance_and_direction(lat2, lon2, lat2_a, lon2_a)
-	_, xdeg = get_distance_and_direction(lat2, lon2, lat1, lon1)
+	_, g1deg = get_distance_and_direction(lat1, lon1, lat1_a, lon1_a, False)
+	_, g2deg = get_distance_and_direction(lat2, lon2, lat2_a, lon2_a, False)
+	_, xdeg = get_distance_and_direction(lat2, lon2, lat1, lon1, False)
 
 	"""
 	#g2が止まっているときでもg1で代用 (休息中の牛が対象牛に興味を示すという矛盾を抱えているのでペンディング)
