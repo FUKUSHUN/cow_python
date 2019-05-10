@@ -137,16 +137,16 @@ Parameter
 	t_list	:圧縮されていない時間のリスト
 	v_list	:圧縮されていない速度のリスト
 return
-	update_t_list	:再編した時間のリスト
-	update_v_list	:再編した速度のリスト
+	updated_t_list	:再編した時間のリスト
+	updated_v_list	:再編した速度のリスト
 	start_list	:休息が始まった時間を格納したリスト
 	end_list	:休息が終了した時間を格納したリスト
 """
 def zip_rest(t_list, v_list, threshold = 0.069):
 	is_rest = False
-	tmp_list = [] # 休息時の平均速度を求めるためのリスト 
-	update_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
-	update_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
+	tmp_list = [] # 休息時の平均速度を求めるためのリスト
+	updated_t_list = [] # 連続した休息を一つに折りたたんで再編した時刻のリスト
+	updated_v_list = [] # 連続した休息を一つに折りたたんで再編した速度のリスト
 	start_list = [] # 始まりを格納
 	end_list = [] # 終わりを格納
 	for time, velocity in zip(t_list, v_list):
@@ -160,8 +160,8 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 				tmp_list.append(velocity)
 			# 採食or歩行
 			else:
-				update_t_list.append(time)
-				update_v_list.append(velocity)
+				updated_t_list.append(time)
+				updated_v_list.append(velocity)
 		else:
 			# 休息の続き
 			if(velocity < threshold):
@@ -170,16 +170,16 @@ def zip_rest(t_list, v_list, threshold = 0.069):
 			# 休息の終わり
 			else:
 				end_list.append(end)
-				update_t_list.append(end)
-				update_t_list.append(time)
-				update_v_list.append(sum(tmp_list) / len(tmp_list))
-				update_v_list.append(velocity)
+				updated_t_list.append(end)
+				updated_t_list.append(time)
+				updated_v_list.append(sum(tmp_list) / len(tmp_list))
+				updated_v_list.append(velocity)
 				is_rest = False
 	if(len(start_list) == len(end_list) + 1): # 最後が休息だった場合，最後のセグメントを格納する
 		end_list.append(t_list[len(t_list) - 1])
-		update_t_list.append(t_list[len(t_list) - 1])
-		update_v_list.append(sum(tmp_list) / len(tmp_list))
-	return update_t_list, update_v_list, start_list, end_list
+		updated_t_list.append(t_list[len(t_list) - 1])
+		updated_v_list.append(sum(tmp_list) / len(tmp_list))
+	return updated_t_list, updated_v_list, start_list, end_list
 
 #重心を求める (休息時の座標の重心を求めたい．また，休息していた時間も合わせた形で返したい)
 """
@@ -223,23 +223,25 @@ return
 def remake_gps_list(t_list, p_list, d_list, a_list, start_list, end_list, zipped_g_list, zipped_v_list):
 	updated_zipped_list = []
 	index = 0
-	previous_rest_end = t_list[0]
-	rest_start = start_list[index]
-	rest_end = end_list[index]
+	previous_rest_end = t_list[0] #以前の休息の終了時刻
+	rest_start = start_list[index] #休息の開始時刻
+	rest_end = end_list[index] #休息の終了時刻
+	first_start = start_list[0]
+	last_end = end_list[len(end_list) - 1]
 	for time, p, d, a in zip(t_list, p_list, d_list, a_list):
 		if(rest_end < time):
 			index += 1
 			if(len(start_list) <= index):
-				break
+				index -= 1 #index固定 (breakしてはいけないので)
 			else:
 				previous_rest_end = end_list[index - 1]
 				rest_start = start_list[index]
 				rest_end = end_list[index]
 		#休息中でないところには通常通り登録する
-		if((previous_rest_end < time or previous_rest_end == t_list[0]) and time < rest_start):
+		if((previous_rest_end < time and time < rest_start) or (time < first_start or last_end < time)):
 			updated_zipped_list.append((time, p, d, a))
-		elif(start <= time and time <= end):
-			
+
+	return updated_zipped_list
 
 #特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
@@ -328,17 +330,20 @@ if __name__ == '__main__':
 		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
 		
-		c_list = calassify_distance(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
-		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
+		#c_list = calassify_distance(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
+		#scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 
 		zipped_t_list, zipped_v_list, s_list, e_list = zip_rest(t_list, v_list) # 休息を圧縮する
-		remake_gps_list(t_list, p_list, d_list, a_list)
 		g_list = determin_center(t_list, p_list, s_list, e_list) # 休息の重心を求める
+		test = remake_gps_list(t_list, p_list, d_list, a_list, s_list, e_list, g_list, zipped_v_list) #圧縮された休息を用いて再度リストを作り直す
+		print(len(g_list))
+		print(len(test))
+		print(len(zipped_t_list))
 		output_feature_info(t_list, p_list, s_list, e_list) # 特徴を出力する
 		#display = disp.Adjectory(True)
 		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
-		display = disp.Adjectory(True)
-		display.plot_rest_place(g_list) # 休息の場所の分布のプロット
+		#display = disp.Adjectory(True)
+		#display.plot_rest_place(g_list) # 休息の場所の分布のプロット
 
-		c_list = calassify_distance(v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
+		c_list = calassify_distance(zipped_v_list) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(zipped_t_list, zipped_v_list, c_list) # 時系列で速さの散布図を表示
