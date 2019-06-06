@@ -285,7 +285,7 @@ def output_feature_info(t_list, p_list, d_list, v_list, l_list):
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Start time, Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Moving distance", "Moving direction", "Label"))
+		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Moving distance", "Moving direction", "Label"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
