@@ -39,7 +39,7 @@ class Adjectory:
     def plot_rest_place(self, rest_g_list):
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in rest_g_list:
-            if(pos[2] >= 1):
+            if(pos[0] >= 1):
                 self.draw_circle(draw, pos[0], pos[1], pos[2])
             #print(pos[0], pos[1], pos[2])
         image_list = np.asarray(self.image) # 画像をarrayに変換
@@ -51,7 +51,7 @@ class Adjectory:
         latitude, longitude :緯度・経度
         time    :そこにいた時間 (円の大きさに反映)
     """
-    def draw_circle(self, draw, latitude, longitude, time):
+    def draw_circle(self, draw, time, latitude, longitude):
         width = self.__bottom_right[1] - self.__top_left[1] #正
         height = self.__bottom_right[0] - self.__top_left[0] #負
         x = ((longitude - self.__top_left[1]) / width) * self.__size[0]
