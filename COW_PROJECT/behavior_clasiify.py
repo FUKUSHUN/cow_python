@@ -7,11 +7,14 @@ import re
 import datetime
 import gc
 import sys
-import cows.cow as Cow
-import cows.geography as geo
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import math
+import sklearn.decomposition as skd
+import analyze_main.hmm as hmm
+
+import cows.cow as Cow
+import cows.geography as geo
 import cows.momentum_analysys as ma
 import image.adjectory_image as disp
 """
@@ -192,7 +195,10 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 			is_rest = False
 			is_graze = False
 			is_walk = True
-
+	
+	# 最後の行動を登録して登録終了
+	p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
+	zipped_list.append(((start, end), p, d, v, choice_state(v)))
 	print("---圧縮が終了しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return zipped_list
@@ -245,23 +251,29 @@ def make_rest_data(zipped_list):
 #特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
 Parameter
+	filename	:ファイルのパス
 	t_list	:圧縮後の時刻のリスト
 	p_list	:圧縮後の位置情報のリスト
 	d_list	:圧縮後の距離のリスト
 	l_list	:圧縮後の暫定的なラベルのリスト
 """
-def output_feature_info(t_list, p_list, d_list, v_list, l_list):
+def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print(sys._getframe().f_code.co_name, "実行中")
 	feature_list =[]
-	
-	#####登録情報#####
+
+	###登録に必要な変数###
 	previous_lat = p_list[0][0]
 	previous_lon = p_list[0][1]
+	previous_rest_time = None
+
+	#####登録情報#####
 	lat = 0.0
 	lon = 0.0
 	time_length = None #現在の休息の時間
 	moving_distance = None #休息間の距離
 	moving_direction = None #次の休息への移動方向
+	previous_rest_length = None #前の休息の長さ
+	previous_rest_interval = None #前の休息からの間隔
 
 	print("特徴を計算します---")
 	#####登録#####
@@ -272,25 +284,42 @@ def output_feature_info(t_list, p_list, d_list, v_list, l_list):
 
 		moving_distance, moving_direction = geo.get_distance_and_direction(previous_lat, previous_lon, lat, lon, True) #前の重心との直線距離
 		sum_of_distance = dis # 行動内での移動距離
+		if (previous_rest_time is not None):
+			previous_rest_interval = (time[0] - previous_rest_time).total_seconds()
+
+		if (label == 0): # 休息
+			previous_rest_length = (time[1] - time[0]).total_seconds()
+			previous_rest_time = time[1] # 前の休息が終わった時間
+			previous_rest_interval = 0
 
 		###登録###
-		feature_list.append([time, lat, lon, time_length, sum_of_distance, vel, moving_distance, moving_direction, label])
+		feature_list.append([time, lat, lon, time_length, sum_of_distance, vel, moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label])
 		###引継###
 		previous_lat = lat
 		previous_lon = lon
 	print("---特徴を計算しました")
 
-	filename = "行動解析/features.csv"
 	print(filename + "に出力します---")
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Moving distance", "Moving direction", "Label"))
+		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Moving distance", "Moving direction", "Last rest length", "Last rest interval", "Label"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return
+
+#3次元のデータを主成分分析し，2次元にする
+def reduce_dim_from3_to2(x, y, z, w, v):
+    print("今から主成分分析を行います")
+    features = np.array([x.values, y.values, z.values, w.values, v.values]).T
+    pca = skd.PCA()
+    pca.fit(features)
+    transformed = pca.fit_transform(features)
+    print("累積寄与率: ", pca.explained_variance_ratio_)
+    print("主成分分析が終了しました")
+    return transformed[:, 0], transformed[:, 1]
 
 #移動速度に対して分類を行い視覚化を可能にする
 """
@@ -331,43 +360,34 @@ def calassify_velocity(v_list, graze = 0.069, walk = 0.18, l_list=None):
 Parameter
 	zipped_t_list	:圧縮された時間のリスト
 	zipped_l_list	:圧縮により求められたラベルのリスト
-	start_list, end_list	:それぞれ休息の始まりと終わりの時刻を格納したリスト
 	t_list	:圧縮前の時間のリスト（いつも5sの間隔で作られている訳ではないので元の時間のリストの時間を参照する）
 Return
-	behavior_list	:解凍したリスト
+	l_list	:解凍したラベルのリスト
 """
-def decode(zipped_t_list, zipped_l_list, start_list, end_list, t_list):
+def decode(t_list, zipped_t_list, zipped_l_list):
 	print(sys._getframe().f_code.co_name, "実行中")
-	label = None
-	behavior_list = []
 	index = 0
-	rest_start = start_list[index] #休息の開始時刻
-	rest_end = end_list[index] #休息の終了時刻
+	l_list = []
+
+	start = zipped_t_list[0][0]
+	end = zipped_t_list[0][1]
+	label = zipped_l_list[0]
 	for time in t_list:
-		if(rest_end < time):
+		if (start <= time and time <= end):
+			l_list.append(label)
+		if (len(l_list) == len(t_list)):
+			break
+		if (end <= time):
 			index += 1
-			if(len(start_list) <= index):
-				index -= 1 #index固定 (breakしてはいけないので)
-			else:
-				rest_start = start_list[index]
-				rest_end = end_list[index]
-		if (rest_start <= time and time <= rest_end):
-			label = "R" # Rest
-		else:
-			for t, l in zip(zipped_t_list, zipped_l_list):
-				if(t == time):
-					label = l
-					break
-		if (label is not None):
-			behavior_list.append((time, label))
-		else:
-			print("ラベルがありません")
-			sys.exit() # 訓練データなどでラベルがない場合でもzipped_l_listにはあらかじめ"N"が登録されているものとする
-		label = None #間違って前のラベルを引き継がないように
+			start = zipped_t_list[index][0]
+			end = zipped_t_list[index][1]
+			label = zipped_l_list[index]
+
 	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return behavior_list
+	return l_list
 
 if __name__ == '__main__':
+	filename = "行動解析/features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
 	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
 	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
@@ -381,13 +401,24 @@ if __name__ == '__main__':
 
 		zipped_list = zipping(t_list, p_list, d_list, v_list) # 圧縮する
 		zipped_rest_list = make_rest_data(zipped_list) # 休息時間と重心だけのリストにする
-		output_feature_info([row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
+		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
 		
 		#display = disp.Adjectory(False)
 		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
-		display = disp.Adjectory(False)
-		display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
-
+		#display = disp.Adjectory(False)
+		#display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
+		
 		c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
-		scatter_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+		scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 
+		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
+		b, c = reduce_dim_from3_to2(df['E'], df['D'], df['F'], df['I'], df['J'])
+		observation = np.stack([b, c]).T
+		interface = hmm.hmm_interface(3)
+		interface.train_data(observation)
+		print("遷移行列: ",interface.transition_matrix)
+		print("出力期待値: ",interface.means)
+		print("初期確率: ",interface.init_matrix)
+		result = interface.predict_data(observation)
+		c_list = decode(t_list, [row[0] for row in zipped_list], result)
+		scatter_plot(t_list, d_list, c_list) # 時系列で速さの散布図を表示
