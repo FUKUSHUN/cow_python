@@ -210,7 +210,7 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 	elif (r_threshold <= velocity and velocity < g_threshold):
 		return 1 # 採食
 	else:
-		return 2 # 歩行
+		return 1 # 歩行
 
 #場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
 def extract_mean(p_list, d_list, v_list):
@@ -285,10 +285,10 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 		moving_distance, moving_direction = geo.get_distance_and_direction(previous_lat, previous_lon, lat, lon, True) #前の重心との直線距離
 		sum_of_distance = dis # 行動内での移動距離
 		if (previous_rest_time is not None):
-			previous_rest_interval = (time[0] - previous_rest_time).total_seconds()
+			previous_rest_interval = (time[0] - previous_rest_time).total_seconds() / 5 + 1
 
 		if (label == 0): # 休息
-			previous_rest_length = (time[1] - time[0]).total_seconds()
+			previous_rest_length = (time[1] - time[0]).total_seconds() / 5 + 1
 			previous_rest_time = time[1] # 前の休息が終わった時間
 			previous_rest_interval = 0
 
@@ -311,9 +311,9 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	return
 
 #3次元のデータを主成分分析し，2次元にする
-def reduce_dim_from3_to2(x, y, z, w, v):
+def reduce_dim_from3_to2(x, y, z):
     print("今から主成分分析を行います")
-    features = np.array([x.values, y.values, z.values, w.values, v.values]).T
+    features = np.array([x.values, y.values, z.values]).T
     pca = skd.PCA()
     pca.fit(features)
     transformed = pca.fit_transform(features)
@@ -408,11 +408,11 @@ if __name__ == '__main__':
 		#display = disp.Adjectory(False)
 		#display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
 		
-		c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
-		scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
+		#scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 
 		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
-		b, c = reduce_dim_from3_to2(df['E'], df['D'], df['F'], df['I'], df['J'])
+		b, c = reduce_dim_from3_to2(df['E'], df['F'], df['I'])
 		observation = np.stack([b, c]).T
 		interface = hmm.hmm_interface(3)
 		interface.train_data(observation)
@@ -421,4 +421,4 @@ if __name__ == '__main__':
 		print("初期確率: ",interface.init_matrix)
 		result = interface.predict_data(observation)
 		c_list = decode(t_list, [row[0] for row in zipped_list], result)
-		scatter_plot(t_list, d_list, c_list) # 時系列で速さの散布図を表示
+		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示

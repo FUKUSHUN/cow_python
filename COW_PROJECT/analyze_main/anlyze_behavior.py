@@ -22,8 +22,9 @@ def show_3d_plot(df):
     #A:Start time,B:Latitude,C:Longitude,D:Continuous time,E:Moving amount,F:Average velocity,G:Moving distance,H:Moving direction,I:Last rest length,J:Last rest interval,K:Label
     #ax.plot(df['H'], df['J'], df['L'], "o", color="#00aa00", ms=4, mew=0.5)
     #plt.show()
-    #ax.plot(df['D'], df['E'], df['J'], "o", color="#00aa00", ms=4, mew=0.5)
-    b, c = reduce_dim_from3_to2(df['D'], df['E'], df['I'], df['J'])
+    ax.plot(df['D'], df['E'], df['I'], "o", color="#00aa00", ms=4, mew=0.5)
+    """
+    b, c = reduce_dim_from3_to2(df['D'], df['E'], df['I'])
     ax.plot(a, b, c, "o", color="#00aa00", ms=4, mew=0.5)
     
     observation = np.stack([b, c]).T
@@ -52,7 +53,7 @@ def show_3d_plot(df):
     ax.plot(red[0], red[1], red[2], "o", color="#00aa00", ms=4, mew=0.5)
     ax.plot(blue[0], blue[1], blue[2], "o", color="#0000aa", ms=4, mew=0.5)
     ax.plot(green[0], green[1], green[2], "o", color="#aa0000", ms=4, mew=0.5)
-    
+    """
     plt.show()
 
 #datetime型のデータを整数型に直して系列を作成する
@@ -63,9 +64,9 @@ def translate_dt_to_int(dt_list):
     return pd.Series(i_list)
 
 #3次元のデータを主成分分析し，2次元にする
-def reduce_dim_from3_to2(x, y, z, w):
+def reduce_dim_from3_to2(x, y, z):
     print("今から主成分分析を行います")
-    features = np.array([x.values, y.values, z.values, w.values]).T
+    features = np.array([x.values, y.values, z.values]).T
     pca = skd.PCA()
     pca.fit(features)
     transformed = pca.fit_transform(features)

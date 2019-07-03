@@ -11,6 +11,11 @@ class hmm_interface:
         
     def __init__(self, n_state):
         self.model = hmm.GaussianHMM(n_components=n_state, algorithm="viterbi",covariance_type="full")
+        #emission_matrix = None
+        self.means = None
+        self.covars = None
+        self.transition_matrix = None
+        self.init_matrix = None
 
     def train_data(self, observation):
         self.model.fit(observation)
