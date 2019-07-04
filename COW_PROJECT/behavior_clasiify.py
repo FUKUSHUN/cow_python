@@ -133,6 +133,8 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 	is_graze = False
 	is_walk = False
 
+	start = None #未定義エラー除去
+	end = None 
 	for time, place, distance, velocity in zip(t_list, p_list, d_list, v_list):
 		if (is_rest): # 1個前が休息
 			if (choice_state(velocity) == 0):
@@ -142,7 +144,7 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 				end = time
 			else: # 休息の終了
 				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, v, 0))
+				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 0))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -156,7 +158,7 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 				end = time
 			else: # 採食の終了
 				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, v, 1))
+				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 1))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -170,7 +172,7 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 				end = time
 			else: # 歩行の終了
 				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, v, 2))
+				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 2))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -198,7 +200,7 @@ def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 
 	
 	# 最後の行動を登録して登録終了
 	p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-	zipped_list.append(((start, end), p, d, v, choice_state(v)))
+	zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], choice_state(v)))
 	print("---圧縮が終了しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return zipped_list
@@ -212,7 +214,7 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 	else:
 		return 1 # 歩行
 
-#場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
+#場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
 def extract_mean(p_list, d_list, v_list):
 	ave_lat_list = [] #平均を求めるための緯度のリスト
 	ave_lon_list = [] #平均を求めるための経度のリスト
@@ -233,9 +235,9 @@ def extract_mean(p_list, d_list, v_list):
 #休息時間と休息の重心（緯度・経度）を時刻順に格納したリストを返す
 """
 Parameter
-	zipped_list		:圧縮後のリスト(各要素の１番目が (start, end), 2番目が (緯度, 経度))
+	zipped_list		: 圧縮後のリスト (各要素の１番目が (start, end), 2番目が (緯度, 経度))
 return
-	rest_list	:各状態の重心とその時間
+	rest_list	: 休息の重心とその時間
 """
 def make_rest_data(zipped_list):
 	print(sys._getframe().f_code.co_name, "実行中")
@@ -247,6 +249,24 @@ def make_rest_data(zipped_list):
 	print("---休息時間と休息の重心を時刻順にリストに格納しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return rest_list
+
+#休息でない行動のみのリストにする
+"""
+Parameter
+	zipped_list	: 圧縮後のリスト
+return
+	walk_list	: 行動のリスト（他の要素はなにも変えない）
+"""
+def make_walk_data(zipped_list):
+	print(sys._getframe().f_code.co_name, "実行中")
+	print("休息以外の行動のみを取り出します---")
+	walk_list = []
+	for row in zipped_list:
+		if (row[4] != 0):
+			walk_list.append(row)
+	print("---休息以外の行動のみをリストに格納しました")
+	print(sys._getframe().f_code.co_name, "正常終了\n")
+	return walk_list
 
 #特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
@@ -293,7 +313,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			previous_rest_interval = 0
 
 		###登録###
-		feature_list.append([time, lat, lon, time_length, sum_of_distance, vel, moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label])
+		feature_list.append([time, lat, lon, time_length, sum_of_distance, vel[0], vel[1], vel[2], moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label])
 		###引継###
 		previous_lat = lat
 		previous_lon = lon
@@ -303,7 +323,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Moving distance", "Moving direction", "Last rest length", "Last rest interval", "Label"))
+		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Moving distance", "Moving direction", "Last rest length", "Last rest interval", "Label"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
@@ -387,7 +407,7 @@ def decode(t_list, zipped_t_list, zipped_l_list):
 	return l_list
 
 if __name__ == '__main__':
-	filename = "行動解析/features.csv"
+	filename = "features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
 	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
 	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
@@ -400,17 +420,18 @@ if __name__ == '__main__':
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 
 		zipped_list = zipping(t_list, p_list, d_list, v_list) # 圧縮する
-		zipped_rest_list = make_rest_data(zipped_list) # 休息時間と重心だけのリストにする
-		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
+		zipped_act_list = make_walk_data(zipped_list)
+		output_feature_info(filename, [row[0] for row in zipped_act_list], [row[1] for row in zipped_act_list], [row[2] for row in zipped_act_list], [row[3] for row in zipped_act_list], [row[4] for row in zipped_act_list]) # 特徴を出力する
 		
-		#display = disp.Adjectory(False)
+		#display = disp.Adjectory(True)
 		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
-		#display = disp.Adjectory(False)
+		#display = disp.Adjectory(True)
+		#zipped_rest_list = make_rest_data(zipped_list) # 描画用に休息時間と重心だけのリストにする
 		#display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
 		
 		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		#scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
-
+		"""
 		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
 		b, c = reduce_dim_from3_to2(df['E'], df['F'], df['I'])
 		observation = np.stack([b, c]).T
@@ -422,3 +443,4 @@ if __name__ == '__main__':
 		result = interface.predict_data(observation)
 		c_list = decode(t_list, [row[0] for row in zipped_list], result)
 		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
+		"""
