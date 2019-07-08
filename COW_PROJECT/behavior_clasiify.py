@@ -212,7 +212,7 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 	elif (r_threshold <= velocity and velocity < g_threshold):
 		return 1 # 採食
 	else:
-		return 1 # 歩行
+		return 1 # 歩行 (実施不透明)
 
 #場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
 def extract_mean(p_list, d_list, v_list):
@@ -267,6 +267,18 @@ def make_walk_data(zipped_list):
 	print("---休息以外の行動のみをリストに格納しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return walk_list
+
+#歩行の変化点検出を行う
+#どのように行うかは未定，歩行の前後にウォーミングアップのような時間が存在するため
+"""
+	t_list	:圧縮後の時刻のリスト
+	p_list	:圧縮後の位置情報のリスト
+	d_list	:圧縮後の距離のリスト
+	l_list	:圧縮後の暫定的なラベルのリスト
+"""
+"""
+def devide_walk_point(t_list, p_list, d_list, v_list, l_list):
+"""
 
 #特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
@@ -415,6 +427,7 @@ if __name__ == '__main__':
 		print(len(t_list))
 		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
+		plot_velocity_data(t_list, v_list)
 		
 		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示

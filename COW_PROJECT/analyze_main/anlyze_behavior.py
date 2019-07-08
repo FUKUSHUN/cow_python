@@ -22,7 +22,7 @@ def show_3d_plot(df):
     #A:Start time,B:Latitude,C:Longitude,D:Continuous time,E:Moving amount,F:Average velocity,G:Moving distance,H:Moving direction,I:Last rest length,J:Last rest interval,K:Label
     #ax.plot(df['H'], df['J'], df['L'], "o", color="#00aa00", ms=4, mew=0.5)
     #plt.show()
-    ax.plot(df['F'], df['G'], df['H'], "o", color="#00aa00", ms=4, mew=0.5)
+    ax.plot(df['E'], df['F'], df['G'], "o", color="#00aa00", ms=4, mew=0.5)
     plt.show()
 
 #datetime型のデータを整数型に直して系列を作成する
