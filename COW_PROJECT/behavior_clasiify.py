@@ -1,5 +1,6 @@
 #-*- encoding:utf-8 -*-
 import numpy as np
+import scipy as sp
 import pandas as pd
 import statistics
 import csv
@@ -11,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import math
 import sklearn.decomposition as skd
+import sklearn
 import analyze_main.hmm as hmm
 
 import cows.cow as Cow
@@ -310,7 +312,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print("特徴を計算します---")
 	#####登録#####
 	for time, pos, dis, vel, label in zip(t_list, p_list, d_list, v_list, l_list):
-		time_length = (time[1] - time[0]).total_seconds()
+		time_length = (time[1] - time[0]).total_seconds() / 5 + 1
 		lat = pos[0]
 		lon = pos[1]
 
@@ -325,7 +327,15 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			previous_rest_interval = 0
 
 		###登録###
-		feature_list.append([time, lat, lon, time_length, sum_of_distance, vel[0], vel[1], vel[2], moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label])
+		if (label == 1):
+			DA = 0
+			AD = 0
+			CVA = 0
+			if (sum_of_distance != 0 and moving_distance != 0):
+				DA = moving_distance / sum_of_distance
+				AD = sum_of_distance / moving_distance
+				CVA = 5 * time_length * vel[0] / sum_of_distance
+			feature_list.append([time, lat, lon, time_length, sum_of_distance, vel[0], vel[1], vel[2], moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label, DA, AD, CVA])
 		###引継###
 		previous_lat = lat
 		previous_lon = lon
@@ -335,7 +345,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Moving distance", "Moving direction", "Last rest length", "Last rest interval", "Label"))
+		writer.writerow(("Start time", "Latitude", "Longitude", "Continuous time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Moving distance", "Moving direction", "Last rest length", "Last rest interval", "Label", "DA", "AD", "CVA"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
@@ -361,7 +371,7 @@ Parameter
 return
 	それぞれが振り分けられたクラスタ ("red", "green", "blue")
 """
-def calassify_velocity(v_list, graze = 0.069, walk = 0.18, l_list=None):
+def calassify_velocity(v_list, graze = 0.0694, walk = 0.181, l_list=None):
 	data_list = []
 	if (l_list is None):
 		for data in v_list:
@@ -418,6 +428,19 @@ def decode(t_list, zipped_t_list, zipped_l_list):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return l_list
 
+def decode2(l_list, new_l_list):
+	print(sys._getframe().f_code.co_name, "実行中")
+	index = 0
+	new_labels = []
+	for l in l_list:
+		if (l == 1):
+			new_labels.append(new_l_list[index] + 1)
+			index += 1
+		else:
+			new_labels.append(l)
+	print(sys._getframe().f_code.co_name, "正常終了\n")
+	return new_labels
+
 if __name__ == '__main__':
 	filename = "features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
@@ -427,14 +450,14 @@ if __name__ == '__main__':
 		print(len(t_list))
 		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
-		plot_velocity_data(t_list, v_list)
+		#plot_velocity_data(t_list, v_list)
 		
 		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
 		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 
 		zipped_list = zipping(t_list, p_list, d_list, v_list) # 圧縮する
-		zipped_act_list = make_walk_data(zipped_list)
-		output_feature_info(filename, [row[0] for row in zipped_act_list], [row[1] for row in zipped_act_list], [row[2] for row in zipped_act_list], [row[3] for row in zipped_act_list], [row[4] for row in zipped_act_list]) # 特徴を出力する
+		#zipped_act_list = make_walk_data(zipped_list)
+		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
 		
 		#display = disp.Adjectory(True)
 		#display.plot_moving_ad(p_list) # 移動の軌跡をプロット
@@ -444,10 +467,30 @@ if __name__ == '__main__':
 		
 		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		#scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
-		"""
-		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
-		b, c = reduce_dim_from3_to2(df['E'], df['F'], df['I'])
-		observation = np.stack([b, c]).T
+		
+		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,7,8,12,13,14,15], names=('A', 'D', 'E', 'F', 'G', 'H', 'I', 'M', 'N', 'O', 'P'))
+		
+		#b, c = reduce_dim_from3_to2(df['E'], df['N'], df['P'])
+		#clust_array = np.array([df['E'], df['N'], df['P']])
+		#clust_array = clust_array.T
+		#pred = sklearn.cluster.KMeans(n_clusters = 2).fit_predict(clust_array)
+		pred = []
+		for d, ad in zip(df['E'], df['N']):
+			if (d >= 10):
+				if (0.4 < ad and ad < 0.9):
+					pred.append(1)
+				else:
+					pred.append(0)
+			else:        
+				pred.append(0)
+		result = decode2([row[4] for row in zipped_list], pred)
+		c_list = decode(t_list, [row[0] for row in zipped_list], result)
+		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
+
+		
+		#df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
+		#b, c = reduce_dim_from3_to2(df['E'], df['F'], df['I'])
+		observation = np.array(c_list).reshape(-1, 1)
 		interface = hmm.hmm_interface(3)
 		interface.train_data(observation)
 		print("遷移行列: ",interface.transition_matrix)
@@ -456,4 +499,4 @@ if __name__ == '__main__':
 		result = interface.predict_data(observation)
 		c_list = decode(t_list, [row[0] for row in zipped_list], result)
 		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
-		"""
+		
