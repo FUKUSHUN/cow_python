@@ -4,7 +4,6 @@ import scipy as sp
 import pandas as pd
 import statistics
 import csv
-import re
 import datetime
 import gc
 import sys
@@ -15,77 +14,16 @@ import sklearn.decomposition as skd
 import sklearn
 import analyze_main.hmm as hmm
 
+import behavior_classification.loading as loading
+import behavior_classification.preprocessing as preprocessing
 import cows.cow as Cow
 import cows.geography as geo
 import cows.momentum_analysys as ma
 import image.adjectory_image as disp
+
 """
 えげつないスパゲッティです
 """
-#データベースから指定牛の指定期間のデータを読み込む (元データ (1 Hz) を5s (0.2Hz) に戻す処理も含む)
-def read_gps(cow_id, start, end):
-	# データを読み込み，それぞれのリストを作成 (情報ごとのリストにするか時間ごとのリストのリストにするかは場合による) 
-	time_list = [] # 時間のリスト (主キー)
-	position_list = [] # (緯度，経度) のリスト
-	distance_list = [] # 距離のリスト
-	velocity_list = [] # 速さのリスト
-	angle_list = [] # 移動角度のリスト
-	dt = datetime.datetime(start.year, start.month, start.day)
-	a = start
-	while(dt < end):
-		t_list = []
-		pos_list = []
-		dis_list = []
-		vel_list = []
-		ang_list = []
-		cow = Cow.Cow(cow_id, dt)
-		dt = dt + datetime.timedelta(days = 1)
-		while(a <= dt and a < end):
-			gps_list = cow.get_gps_list(a, a + datetime.timedelta(minutes = 60))
-			g_before = None
-			for i in range(int(len(gps_list) / 5)):
-				g = gps_list[i * 5]
-				if g_before is not None:
-					lat1, lon1, vel1 = g_before.get_gps_info(g_before.get_datetime())
-					lat2, lon2, vel2 = g.get_gps_info(g.get_datetime())
-					distance, angle = geo.get_distance_and_direction(lat1, lon1, lat2, lon2, False)
-					#print(g.get_datetime().strftime("%Y/%m/%d %H:%M:%S") + " : ", lat2 , ",", lon2)
-					t_list.append(g.get_datetime()) #時間の格納
-					pos_list.append(geo.translate(lat2, lon2)) #位置情報の格納
-					dis_list.append(distance) #距離の格納
-					vel_list.append(vel2) #速さの格納
-					ang_list.append(angle) #角度の格納
-				g_before = g
-			a = a + datetime.timedelta(minutes = 60)
-			del gps_list
-			gc.collect()
-		time_list.append(t_list) #1日分の時間のリストの格納
-		position_list.append(pos_list) #1日分の位置情報の格納
-		distance_list.append(dis_list) #1日分の距離のリストの格納
-		velocity_list.append(vel_list) #1日分の速さのリストの格納
-		angle_list.append(ang_list) #1日分の角度のリストの格納
-		del cow
-		gc.collect()
-		a = dt
-	return time_list, position_list, distance_list, velocity_list, angle_list
-
-#データの解析に使用する時間 (午後12時-午前9時 JST) 分を抽出する
-def select_use_time(t_list, p_list, d_list, v_list, a_list):
-	knot = 0.514444 # 1 knot = 0.51444 m/s
-	time_tmp_list = []
-	position_tmp_list = []
-	distance_tmp_list = []
-	velocity_tmp_list = []
-	angle_tmp_list = []
-	for (t, p, d, v, a) in zip(t_list, p_list, d_list, v_list, a_list):
-		t = t + datetime.timedelta(hours = 9)
-		if(t.hour < 9 or 12 < t.hour):
-			time_tmp_list.append(t)
-			position_tmp_list.append(p)
-			distance_tmp_list.append(d) 
-			velocity_tmp_list.append(v * knot) #単位を[m/s]に直しているだけ
-			angle_tmp_list.append(a)
-	return time_tmp_list, position_tmp_list, distance_tmp_list, velocity_tmp_list, angle_tmp_list
 
 #プロットする
 def plot_velocity_data(t_list, v_list):
@@ -124,7 +62,7 @@ Parameter
 return
 	zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 距離), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト
 """
-def zipping(t_list, p_list, d_list, v_list, r_threshold = 0.0694, g_threshold = 0.181):
+def zipping(t_list, p_list, d_list, v_list):
 	print(sys._getframe().f_code.co_name, "実行中")
 	print("圧縮を開始します---")
 	zipped_list = []
@@ -445,11 +383,17 @@ if __name__ == '__main__':
 	filename = "features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
 	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
-	time_list, position_list, distance_list, velocity_list, angle_list = read_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
+	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
 	for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
-		print(len(t_list))
-		t_list, p_list, d_list, v_list, a_list = select_use_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
-		#t_list, d_list, a_list = ma.convo_per_minutes(t_list, d_list, a_list, 3) #畳み込み
+		# ---前処理---
+		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+		# 畳み込み
+		v_list = preprocessing.convolution(v_list, 3)
+		t_list = preprocessing.elimination(t_list, 3)
+		p_list = preprocessing.elimination(p_list, 3)
+		d_list = preprocessing.elimination(d_list, 3)
+		a_list = preprocessing.elimination(a_list, 3)
+
 		#plot_velocity_data(t_list, v_list)
 		
 		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
