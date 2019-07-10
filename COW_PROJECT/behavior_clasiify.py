@@ -60,7 +60,7 @@ Parameter
 	d_list	: 圧縮されていない距離のリスト
 	v_list	: 圧縮されていない速度のリスト
 return
-	zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 距離), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト
+	zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 経度), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト
 """
 def zipping(t_list, p_list, d_list, v_list):
 	print(sys._getframe().f_code.co_name, "実行中")
@@ -83,8 +83,7 @@ def zipping(t_list, p_list, d_list, v_list):
 				v_tmp_list.append(velocity)
 				end = time
 			else: # 休息の終了
-				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 0))
+				zipped_list.append(((start, end), p_tmp_list, d_tmp_list, v_tmp_list, 0))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -97,8 +96,7 @@ def zipping(t_list, p_list, d_list, v_list):
 				v_tmp_list.append(velocity)
 				end = time
 			else: # 採食の終了
-				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 1))
+				zipped_list.append(((start, end), p_tmp_list, d_tmp_list, v_tmp_list, 1))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -111,8 +109,7 @@ def zipping(t_list, p_list, d_list, v_list):
 				v_tmp_list.append(velocity)
 				end = time
 			else: # 歩行の終了
-				p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-				zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], 2))
+				zipped_list.append(((start, end), p_tmp_list, d_tmp_list, v_tmp_list, 2))
 				p_tmp_list = [place]
 				d_tmp_list = [distance]
 				v_tmp_list = [velocity]
@@ -139,8 +136,7 @@ def zipping(t_list, p_list, d_list, v_list):
 			is_walk = True
 	
 	# 最後の行動を登録して登録終了
-	p, d, v = extract_mean(p_tmp_list, d_tmp_list, v_tmp_list)
-	zipped_list.append(((start, end), p, d, [v, max(v_tmp_list), min(v_tmp_list)], choice_state(v)))
+	zipped_list.append(((start, end), p_tmp_list, d_tmp_list, v_tmp_list, choice_state(velocity)))
 	print("---圧縮が終了しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return zipped_list
@@ -153,24 +149,6 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 		return 1 # 採食
 	else:
 		return 1 # 歩行 (実施不透明)
-
-#場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
-def extract_mean(p_list, d_list, v_list):
-	ave_lat_list = [] #平均を求めるための緯度のリスト
-	ave_lon_list = [] #平均を求めるための経度のリスト
-	sum_dis_list = [] #休息中の距離の総和（おそらく休息中の移動距離の総和は0）を求めるための距離のリスト
-	ave_vel_list = [] #休息中の速さの平均を求めるための速さのリスト
-	for place, distance, velocity in zip(p_list, d_list, v_list):
-		ave_lat_list.append(place[0])
-		ave_lon_list.append(place[1])
-		sum_dis_list.append(distance)
-		ave_vel_list.append(velocity)
-	
-	lat = sum(ave_lat_list) / len(ave_lat_list)
-	lon = sum(ave_lon_list) / len(ave_lon_list)
-	dis = sum(sum_dis_list)
-	vel = sum(ave_vel_list) / len(ave_vel_list)
-	return (lat,lon), dis, vel
 
 #休息時間と休息の重心（緯度・経度）を時刻順に格納したリストを返す
 """
@@ -234,8 +212,8 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	feature_list =[]
 
 	###登録に必要な変数###
-	previous_lat = p_list[0][0]
-	previous_lon = p_list[0][1]
+	previous_lat = p_list[0][0][0]
+	previous_lon = p_list[0][1][1]
 	previous_rest_time = None
 
 	#####登録情報#####
@@ -251,9 +229,12 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####登録#####
 	for time, pos, dis, vel, label in zip(t_list, p_list, d_list, v_list, l_list):
 		time_length = (time[1] - time[0]).total_seconds() / 5 + 1
+		max_vel = max(vel)
+		min_vel = min(vel)
+		pos, dis, vel = extract_mean(pos, dis, vel)
 		lat = pos[0]
 		lon = pos[1]
-
+		
 		moving_distance, moving_direction = geo.get_distance_and_direction(previous_lat, previous_lon, lat, lon, True) #前の重心との直線距離
 		sum_of_distance = dis # 行動内での移動距離
 		if (previous_rest_time is not None):
@@ -272,8 +253,8 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			if (sum_of_distance != 0 and moving_distance != 0):
 				DA = moving_distance / sum_of_distance
 				AD = sum_of_distance / moving_distance
-				CVA = 5 * time_length * vel[0] / sum_of_distance
-			feature_list.append([time, lat, lon, time_length, sum_of_distance, vel[0], vel[1], vel[2], moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label, DA, AD, CVA])
+				CVA = 5 * time_length * vel / sum_of_distance
+			feature_list.append([time, lat, lon, time_length, sum_of_distance, vel, max_vel, min_vel, moving_distance, moving_direction, previous_rest_length, previous_rest_interval, label, DA, AD, CVA])
 		###引継###
 		previous_lat = lat
 		previous_lon = lon
@@ -289,6 +270,24 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print("---" + filename + "に出力しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return
+
+#場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
+def extract_mean(p_list, d_list, v_list):
+	ave_lat_list = [] #平均を求めるための緯度のリスト
+	ave_lon_list = [] #平均を求めるための経度のリスト
+	sum_dis_list = [] #休息中の距離の総和（おそらく休息中の移動距離の総和は0）を求めるための距離のリスト
+	ave_vel_list = [] #休息中の速さの平均を求めるための速さのリスト
+	for place, distance, velocity in zip(p_list, d_list, v_list):
+		ave_lat_list.append(place[0])
+		ave_lon_list.append(place[1])
+		sum_dis_list.append(distance)
+		ave_vel_list.append(velocity)
+	
+	lat = sum(ave_lat_list) / len(ave_lat_list)
+	lon = sum(ave_lon_list) / len(ave_lon_list)
+	dis = sum(sum_dis_list)
+	vel = sum(ave_vel_list) / len(ave_vel_list)
+	return (lat,lon), dis, vel
 
 #3次元のデータを主成分分析し，2次元にする
 def reduce_dim_from3_to2(x, y, z):
@@ -309,13 +308,13 @@ Parameter
 return
 	それぞれが振り分けられたクラスタ ("red", "green", "blue")
 """
-def calassify_velocity(v_list, graze = 0.0694, walk = 0.181, l_list=None):
+def calassify_velocity(v_list, l_list=None):
 	data_list = []
 	if (l_list is None):
 		for data in v_list:
-			if(data < graze):
+			if(choice_state(data) == 0):
 				data_list.append("red")
-			elif(data < walk):
+			elif(choice_state(data) == 1):
 				data_list.append("green")
 			else:
 				data_list.append("blue")
@@ -380,7 +379,7 @@ def decode2(l_list, new_l_list):
 	return new_labels
 
 if __name__ == '__main__':
-	filename = "features.csv"
+	filename = "behavior_classification/features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
 	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
 	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
@@ -395,12 +394,14 @@ if __name__ == '__main__':
 		a_list = preprocessing.elimination(a_list, 3)
 
 		#plot_velocity_data(t_list, v_list)
-		
-		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
-		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
+		#c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
+		#scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 
+		# 圧縮操作
 		zipped_list = zipping(t_list, p_list, d_list, v_list) # 圧縮する
 		#zipped_act_list = make_walk_data(zipped_list)
+
+		#---特徴抽出---
 		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
 		
 		#display = disp.Adjectory(True)
@@ -412,7 +413,7 @@ if __name__ == '__main__':
 		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		#scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 		
-		df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,7,8,12,13,14,15], names=('A', 'D', 'E', 'F', 'G', 'H', 'I', 'M', 'N', 'O', 'P'))
+		df = pd.read_csv(filepath_or_buffer = filename, encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,7,8,12,13,14,15], names=('A', 'D', 'E', 'F', 'G', 'H', 'I', 'M', 'N', 'O', 'P'))
 		
 		#b, c = reduce_dim_from3_to2(df['E'], df['N'], df['P'])
 		#clust_array = np.array([df['E'], df['N'], df['P']])
