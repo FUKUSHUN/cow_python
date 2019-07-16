@@ -26,7 +26,8 @@ class Adjectory:
     def plot_moving_ad(self, g_list):
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in g_list:
-            self.draw_circle(draw, pos[0], pos[1], 3)
+            pos = pos[1:len(pos)-1].split(', ')
+            self.draw_circle(draw, 3, float(pos[0]), float(pos[1]), (0, 255, 0))
             #print(pos[0], pos[1])
         image_list = np.asarray(self.image) # 画像をarrayに変換
         plt.imshow(image_list) # 貼り付け
@@ -40,7 +41,7 @@ class Adjectory:
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in rest_g_list:
             if(pos[0] >= 1):
-                self.draw_circle(draw, pos[0], pos[1], pos[2])
+                self.draw_circle(draw, pos[0], pos[1], pos[2], (255, 0, 0))
             #print(pos[0], pos[1], pos[2])
         image_list = np.asarray(self.image) # 画像をarrayに変換
         plt.imshow(image_list) # 貼り付け
@@ -51,11 +52,11 @@ class Adjectory:
         latitude, longitude :緯度・経度
         time    :そこにいた時間 (円の大きさに反映)
     """
-    def draw_circle(self, draw, time, latitude, longitude):
+    def draw_circle(self, draw, time, latitude, longitude, color):
         width = self.__bottom_right[1] - self.__top_left[1] #正
         height = self.__bottom_right[0] - self.__top_left[0] #負
         x = ((longitude - self.__top_left[1]) / width) * self.__size[0]
         y = ((latitude - self.__top_left[0]) / height) * self.__size[1]
         radius = 1 * time # 半径
         if((0 <= x and x <= self.__size[0]) and (0 <= y and y <= self.__size[1])):
-            draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=(255, 0, 0))
+            draw.ellipse((x - radius, y - radius, x + radius, y + radius), fill=color)

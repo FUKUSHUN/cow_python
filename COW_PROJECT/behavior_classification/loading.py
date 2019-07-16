@@ -68,8 +68,8 @@ def load_gps(cow_id, start, end):
         gc.collect()
         a = dt
     print("---GPSの読み込みが終了しました")
-    print(sys._getframe().f_code.co_name, "正常終了\n")
-    print("The length of time_list: ", len(time_list))
+    print(sys._getframe().f_code.co_name, "正常終了")
+    print("The length of time_list: ", len(time_list), "day(s)\n")
     return time_list, position_list, distance_list, velocity_list, angle_list
 
 """
@@ -105,6 +105,6 @@ def select_used_time(time_list, position_list, distance_list, velocity_list, ang
             new_velocity_list.append(v * knot) #単位を[m/s]に直しているだけ
             new_angle_list.append(a)
     print("---12:00 pm - 9:00 amのデータの抽出が終了しました")
-    print(sys._getframe().f_code.co_name, "正常終了\n")
-    print("The length of time_list: ", len(new_time_list))
+    print(sys._getframe().f_code.co_name, "正常終了")
+    print("The length of time_list: ", len(new_time_list), "\n")
     return new_time_list, new_position_list, new_distance_list, new_velocity_list, new_angle_list

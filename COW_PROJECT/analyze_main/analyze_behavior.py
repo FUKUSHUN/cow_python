@@ -22,15 +22,6 @@ def show_3d_plot(df):
     #clust_array = np.array([df['E'], df['N'], df['P']])
     #clust_array = clust_array.T
     #pred = sklearn.cluster.KMeans(n_clusters = 2).fit_predict(clust_array)
-    pred = []
-    for d, ad in zip(df['E'], df['N']):
-        if (d >= 9):
-            if (0.2 < ad and ad < 0.8):
-                pred.append(1)
-            else:
-                pred.append(0)
-        else:        
-            pred.append(0)
 
     a = translate_dt_to_int(df['A'])
     # 散布図作成
@@ -38,7 +29,7 @@ def show_3d_plot(df):
     #ax.plot(df['H'], df['J'], df['L'], "o", color="#00aa00", ms=4, mew=0.5)
     #plt.show()
     #ax.plot(df['E'], df['N'], df['P'], "o", color="#00aa00", ms=4, mew=0.5)
-    ax.scatter(df['E'], df['N'], df['P'], "o", c=pred)
+    ax.scatter(df['D'], df['E'], df['M'], "o", c="#00aa00")
     plt.show()
 
 #datetime型のデータを整数型に直して系列を作成する
@@ -61,5 +52,5 @@ def reduce_dim_from3_to2(x, y, z):
 
 if __name__ == '__main__':
     #0:Start time, 1:Latitude, 2Longitude, 3:Continuous time, 4:Moving amount, 5:Average velocity, 6:Moving distance, 7:Moving direction, 8:Last rest length, 9:Last rest interval, 10:Label
-    df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,7,8,10,12,13,14,15], names=('A', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'M', 'N', 'O', 'P'))
+    df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,1,2,3,4,5,6,7,9,11,12,13], names=('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'L', 'M', 'N'))
     show_3d_plot(df)
