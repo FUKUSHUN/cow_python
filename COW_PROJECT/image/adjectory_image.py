@@ -26,9 +26,7 @@ class Adjectory:
     def plot_moving_ad(self, g_list):
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in g_list:
-            pos = pos[1:len(pos)-1].split(', ')
             self.draw_circle(draw, 3, float(pos[0]), float(pos[1]), (0, 255, 0))
-            #print(pos[0], pos[1])
         image_list = np.asarray(self.image) # 画像をarrayに変換
         plt.imshow(image_list) # 貼り付け
 
@@ -41,7 +39,7 @@ class Adjectory:
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in rest_g_list:
             if(pos[0] >= 1):
-                self.draw_circle(draw, pos[0], pos[1], pos[2], (255, 0, 0))
+                self.draw_circle(draw, pos[0], float(pos[1]), float(pos[2]), (255, 0, 0))
             #print(pos[0], pos[1], pos[2])
         image_list = np.asarray(self.image) # 画像をarrayに変換
         plt.imshow(image_list) # 貼り付け

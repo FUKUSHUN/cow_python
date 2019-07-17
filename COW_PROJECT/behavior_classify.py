@@ -16,6 +16,7 @@ import analyze_main.hmm as hmm
 
 import behavior_classification.loading as loading
 import behavior_classification.preprocessing as preprocessing
+import behavior_classification.plotting as plotting
 import cows.cow as Cow
 import cows.geography as geo
 import cows.momentum_analysys as ma
@@ -23,37 +24,13 @@ import image.adjectory_image as disp
 
 """
 えげつないスパゲッティです
+このコードでは行動分類を試みています．
+データの読み込みはloading.py, データの前処理はpreprocessing.pyに関数を作成し，呼び出すことにしており，画像生成やプロットに関してはplotting.pyとadjectory_image.pyに任せています
+メイン関数をこのファイルに置き，必要な処理は個々にこのファイル内で関数定義しています
 """
 
-#プロットする
-def plot_velocity_data(t_list, v_list):
-	#グラフ化のための設定
-	fig = plt.figure()
-	ax1 = fig.add_subplot(1,1,1) #4行1列の図
-	#ax1の設定
-	ax1.set_xticklabels(t_list, rotation=90, fontsize='small') #ラベルを回転・サイズ指定
-	ax1.xaxis.set_major_locator(mdates.AutoDateLocator()) #自動的にラベル表示の間隔を設定
-	ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H-%M")) #日付の表示形式を決定
-	ax1.plot(t_list, v_list, 'b')
-	ax1.legend(("Velocity",), loc='upper left')
-	#plt.savefig(t_list[0].strftime("%y-%m-%d") + "-test.png")
-	plt.show()
-
-#散布図形式でプロットする
-def scatter_plot(t_list, v_list, c_list):
-	x_list = []
-	for i in range(len(t_list)):
-		x_list.append(i)
-	x = np.array(x_list)
-	y = np.array(v_list)
-	c = np.array(c_list)
-	fig = plt.figure()
-	ax = fig.add_subplot(1,1,1)
-	ax.scatter(x, y, c = c, s = 1)
-	plt.show()
-
-#圧縮操作を行う
 """
+圧縮操作を行う
 Parameter
 	t_list	: 圧縮されていない時間のリスト
 	p_list	: 圧縮されていない(緯度, 経度)のリスト
@@ -62,7 +39,7 @@ Parameter
 return
 	zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 経度), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト
 """
-def zipping(t_list, p_list, d_list, v_list):
+def compress(t_list, p_list, d_list, v_list):
 	print(sys._getframe().f_code.co_name, "実行中")
 	print("圧縮を開始します---")
 	zipped_list = []
@@ -141,7 +118,9 @@ def zipping(t_list, p_list, d_list, v_list):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return zipped_list
 
-#休息・採食・歩行を判断する（今は閾値や最近傍のアプローチだが変更する可能性あり）
+"""
+休息・採食・歩行を判断する（今は速度データをもとに閾値や最近傍のアプローチだが変更する可能性あり）
+"""
 def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 	if (velocity < r_threshold):
 		return 0 # 休息
@@ -150,43 +129,28 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 	else:
 		return 1 # 歩行 (実施不透明)
 
-#休息時間と休息の重心（緯度・経度）を時刻順に格納したリストを返す
 """
+ある行動のみを個別に取り出す
+行動時間と行動の重心（緯度・経度）を時刻順に格納したリストを返す
+restingであれば休息のみ，walkingであれば歩行のみをそれぞれ個別に取り出す
 Parameter
-	zipped_list		: 圧縮後のリスト (各要素の１番目が (start, end), 2番目が (緯度, 経度))
+	zipped_list		: 圧縮後のリスト (各要素の１番目が (start, end), 2番目が (緯度, 経度), 3番目が速度, 4番目にラベル)
+	state	: 休息を取り出す場合には"resting", 歩行を取り出す場合には"walking"
 return
 	rest_list	: 休息の重心とその時間
 """
-def make_rest_data(zipped_list):
+def extract_one_behavior(zipped_list, state="resting"):
+	behavior_dict = {"resting":0, "walking":1} # 行動ラベルの辞書
 	print(sys._getframe().f_code.co_name, "実行中")
-	print("休息時間と休息の重心を時刻順にリストに格納します---")
-	rest_list = []
+	print(state + "時間と" + state +"重心を時刻順にリストに格納します---")
+	behavior_list = []
 	for row in zipped_list:
-		if (row[4] == 0): #休息なら
+		if (row[4] == behavior_dict[state]): #休息or歩行なら
 			p, _, _ = extract_mean(row[1], row[2], row[3])
-			rest_list.append(((row[0][1] - row[0][0]).total_seconds() / 60, p[0], p[1])) # (時間 [minutes], lat, lon)
-	print("---休息時間と休息の重心を時刻順にリストに格納しました")
+			behavior_list.append([(row[0][1] - row[0][0]).total_seconds() / 60, p[0], p[1]]) # (時間 [minutes], lat, lon)
+	print("---state" + "時間と" + state +"重心を時刻順にリストに格納しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return rest_list
-
-#休息でない行動のみのリストにする
-"""
-Parameter
-	zipped_list	: 圧縮後のリスト
-return
-	walk_list	: 行動のリスト（他の要素はなにも変えない）
-"""
-def make_walk_data(zipped_list):
-	print(sys._getframe().f_code.co_name, "実行中")
-	print("休息以外の行動のみを取り出します---")
-	walk_list = []
-	for row in zipped_list:
-		if (row[4] != 0):
-			p, _, _ = extract_mean(row[1], row[2], row[3])
-			walk_list.append(((row[0][1] - row[0][0]).total_seconds() / 60, p[0], p[1])) # (時間 [minutes], lat, lon)
-	print("---休息以外の行動のみをリストに格納しました")
-	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return walk_list
+	return behavior_list
 
 #歩行の変化点検出を行う
 #どのように行うかは未定，歩行の前後にウォーミングアップのような時間が存在するため
@@ -200,8 +164,8 @@ def make_walk_data(zipped_list):
 def devide_walk_point(t_list, p_list, d_list, v_list, l_list):
 """
 
-#特徴をCSVにして出力する (圧縮が既に行われている前提) 
 """
+特徴をCSVにして出力する (圧縮が既に行われている前提) 
 Parameter
 	filename	:ファイルのパス
 	t_list	:圧縮後の時刻のリスト
@@ -269,8 +233,13 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print("---" + filename + "に出力しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return
-
-# 場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
+"""
+場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
+Parameter
+	p_list	: (緯度，経度) のリスト
+	d_list	: 距離のリスト
+	v_list	: 速さのリスト
+"""
 def extract_mean(p_list, d_list, v_list):
 	ave_lat_list = [] #平均を求めるための緯度のリスト
 	ave_lon_list = [] #平均を求めるための経度のリスト
@@ -310,34 +279,18 @@ def reduce_dim_from3_to2(x, y, z):
 """
 Parameter
 	v_list	:速さのリスト
-	l_list	:ラベルのリスト．Noneであれば速さだけで分類を行い，Noneでなければこのラベルを元に分類を行う
 return
 	それぞれが振り分けられたクラスタ ("red", "green", "blue")
 """
-def calassify_velocity(v_list, l_list=None):
+def calassify_velocity(v_list):
 	data_list = []
-	if (l_list is None):
-		for data in v_list:
-			if (choice_state(data) == 0):
-				data_list.append("red")
-			elif (choice_state(data) == 1):
-				data_list.append("green")
-			else:
-				data_list.append("blue")
-	else:
-		for data, label in zip(v_list, l_list):
-			if (label == "R"):
-				data_list.append("red") # Rest
-			elif (label == "G"):
-				data_list.append("green") # Graze
-			elif (label == "W"):
-				data_list.append("blue") # Walk
-			elif (label == "O"):
-				data_list.append("yellow") # Other
-			elif (label == "N"):
-				data_list.append("magenta") # None
-			else:
-				data_list.append("black") #なぜかどれにも当てはまらない(デバッグ用)
+	for data in v_list:
+		if (choice_state(data) == 0):
+			data_list.append("red")
+		elif (choice_state(data) == 1):
+			data_list.append("green")
+		else:
+			data_list.append("blue")
 	return data_list
 
 #圧縮した休息とその他をラベル付きで解凍する
@@ -349,7 +302,7 @@ Parameter
 Return
 	l_list	:解凍したラベルのリスト
 """
-def decode(t_list, zipped_t_list, zipped_l_list):
+def decompress(t_list, zipped_t_list, zipped_l_list):
 	print(sys._getframe().f_code.co_name, "実行中")
 	index = 0
 	l_list = []
@@ -384,15 +337,6 @@ def decode2(l_list, new_l_list):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return new_labels
 
-def temp(d_list, v_list):
-	r_list = []
-	for d, v in zip(d_list, v_list):
-		if (v != 0):
-			r_list.append(d - (5 * v))
-		else:
-			r_list.append(0)
-	return r_list
-
 if __name__ == '__main__':
 	filename = "behavior_classification/features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
@@ -410,19 +354,17 @@ if __name__ == '__main__':
 		a_list = preprocessing.elimination(a_list, 3)
 
 		# 時系列描画
-		#plot_velocity_data(t_list, v_list)
+		#plotting.line_plot(t_list, v_list)
 		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
-		r_list = temp(d_list, v_list)
-		scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
-		scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
-		scatter_plot(t_list, r_list, c_list) #時系列で速さの散布図を表示
+		plotting.scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
+		plotting.scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
 
 		# 圧縮操作
-		zipped_list = zipping(t_list, p_list, d_list, v_list) # 圧縮する
+		zipped_list = compress(t_list, p_list, d_list, v_list) # 圧縮する
 
 		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
-		#scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
-		#scatter_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+		#plotting.scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+		#plotting.scatter_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 
 		# ---特徴抽出---
 		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
@@ -432,18 +374,17 @@ if __name__ == '__main__':
 		
 		# 軌跡描画
 		display = disp.Adjectory(True)
-		zipped_rest_list = make_rest_data(zipped_list) # 描画用に休息時間と重心だけのリストにする
+		zipped_rest_list = extract_one_behavior(zipped_list, state = "resting") # 描画用に休息時間と重心だけのリストにする
 		display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
-		display.plot_moving_ad(df['B'].tolist()) # 移動の軌跡をプロット
+		zipped_walk_list = np.array(extract_one_behavior(zipped_list, state = "walking")) # 描画用に歩行時間と重心だけのリストにする
+		display.plot_moving_ad(zipped_walk_list[:,1:].tolist()) # 移動の軌跡をプロット
 		plt.show()
-		
-		
 		
 		#result = decode2([row[4] for row in zipped_list], pred)
 		
 		# 時系列描画
-		c_list = decode(t_list, [row[0] for row in zipped_list], result)
-		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
+		c_list = decompress(t_list, [row[0] for row in zipped_list], result)
+		plotting.scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
 
 		
 		#df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
@@ -455,6 +396,6 @@ if __name__ == '__main__':
 		print("出力期待値: ",interface.means)
 		print("初期確率: ",interface.init_matrix)
 		result = interface.predict_data(observation)
-		c_list = decode(t_list, [row[0] for row in zipped_list], result)
-		scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
+		c_list = decompress(t_list, [row[0] for row in zipped_list], result)
+		plotting.scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
 		
