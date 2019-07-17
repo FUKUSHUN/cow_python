@@ -10,13 +10,13 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import math
-import sklearn.decomposition as skd
 import sklearn
 import analyze_main.hmm as hmm
 
 import behavior_classification.loading as loading
 import behavior_classification.preprocessing as preprocessing
 import behavior_classification.plotting as plotting
+import behavior_classification.analyzing as analyzing
 import cows.cow as Cow
 import cows.geography as geo
 import cows.momentum_analysys as ma
@@ -184,11 +184,11 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 
 	#####登録情報#####
 	time_index = None
-	center = 0.0 # 移動の重心
-	time_length = None #圧縮にまとめられた観測の個数
+	center = None # 移動の重心
+	previous_rest_length = None #圧縮にまとめられた前の休息の観測の個数
+	walking_length = None #圧縮にまとめられた歩行の観測の個数
 	moving_distance = None #休息間の距離
 	moving_direction = None #次の休息への移動方向
-	previous_rest_length = None #前の休息の長さ
 
 	print("特徴を計算します---")
 	feature_list =[]
@@ -196,7 +196,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	for i, (time, pos, dis, vel, label) in enumerate(zip(t_list, p_list, d_list, v_list, l_list)):
 		if (label == 1): # 歩行
 			time_index = time
-			time_length = (time[1] - time[0]).total_seconds() / 5 + 1
+			walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
 			max_vel = max(vel)
 			min_vel = min(vel)
 			
@@ -214,7 +214,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 				VA = 5 * calculate_rate(mean_vel, ave_accumulated_distance)
 				
 				###リストに追加###
-				feature_list.append([time_index, center, time_length, ave_accumulated_distance, mean_vel, max_vel, min_vel, moving_distance, moving_direction, previous_rest_length, label, DA, AD, VA])
+				feature_list.append([time_index, center, previous_rest_length, walking_length, ave_accumulated_distance, mean_vel, max_vel, min_vel, moving_distance, moving_direction, label, DA, AD, VA])
 
 			###引継###
 			previous_rest_length = (time[1] - time[0]).total_seconds() / 5 + 1
@@ -227,12 +227,13 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Time", "Place", "Continuous time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Moving direction", "Last rest length", "Label", "D/A", "A/D", "V/A"))
+		writer.writerow(("Time", "Walking place", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction", "Label", "D/A", "A/D", "V/A"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return
+
 """
 場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
 Parameter
@@ -263,17 +264,6 @@ def calculate_rate(amount1, amount2):
 		return amount1 / amount2
 	else:
 		return 0
-
-#3次元のデータを主成分分析し，2次元にする
-def reduce_dim_from3_to2(x, y, z):
-    print("今から主成分分析を行います")
-    features = np.array([x.values, y.values, z.values]).T
-    pca = skd.PCA()
-    pca.fit(features)
-    transformed = pca.fit_transform(features)
-    print("累積寄与率: ", pca.explained_variance_ratio_)
-    print("主成分分析が終了しました")
-    return transformed[:, 0], transformed[:, 1]
 
 #移動速度に対して分類を行い視覚化を可能にする
 """
@@ -388,7 +378,7 @@ if __name__ == '__main__':
 
 		
 		#df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
-		#b, c = reduce_dim_from3_to2(df['E'], df['F'], df['I'])
+		#b, c = analyzing.reduce_dim_from3_to2(df['E'], df['F'], df['I'])
 		observation = np.array(c_list).reshape(-1, 1)
 		interface = hmm.hmm_interface(5)
 		interface.train_data(observation)
