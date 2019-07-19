@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import mpl_toolkits.mplot3d as mpl3d
 
 """
 横軸に時間，縦軸にセンサ値をプロットする
@@ -44,3 +45,34 @@ def scatter_plot(t_list, v_list, c_list):
 	ax = fig.add_subplot(1,1,1)
 	ax.scatter(x, y, c = c, s = 1)
 	plt.show()
+
+"""
+3次元散布図を作成する
+Parameter
+    x, y, z : それぞれ各次元のリスト
+"""
+def show_3d_plot(x, y, z):
+    # グラフ作成
+    fig = plt.figure()
+    ax = mpl3d.Axes3D(fig)
+
+    # 軸ラベルの設定
+    ax.set_xlabel("First")
+    ax.set_ylabel("Second")
+    ax.set_zlabel("Third")
+
+    # 散布図作成
+    ax.scatter(x, y, z, "o", c="#00aa00")
+    plt.show()
+
+"""
+時系列で2次元の散布図を作成する
+Parameter
+    t   : 時間のリスト
+    x, y : それぞれ各次元のリスト
+"""
+def time_scatter(t_list, x, y):
+    t = []
+    for i in range(len(t_list)):
+        t.append(i)
+    show_3d_plot(t, x, y)

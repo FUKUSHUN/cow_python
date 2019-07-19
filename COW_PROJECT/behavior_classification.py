@@ -2,24 +2,19 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
-import statistics
 import csv
 import datetime
-import gc
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import math
-import sklearn
-import analyze_main.hmm as hmm
 
+# 自作クラス
+import cows.geography as geo
+import behavior_classification.hmm as hmm
 import behavior_classification.loading as loading
 import behavior_classification.preprocessing as preprocessing
 import behavior_classification.plotting as plotting
 import behavior_classification.analyzing as analyzing
-import cows.cow as Cow
-import cows.geography as geo
-import cows.momentum_analysys as ma
 import image.adjectory_image as disp
 
 """
@@ -51,7 +46,7 @@ def compress(t_list, p_list, d_list, v_list):
 	is_walk = False
 
 	start = None #未定義エラー除去
-	end = None 
+	end = None
 	for time, place, distance, velocity in zip(t_list, p_list, d_list, v_list):
 		if (is_rest): # 1個前が休息
 			if (choice_state(velocity) == 0):
@@ -152,9 +147,10 @@ def extract_one_behavior(zipped_list, state="resting"):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return behavior_list
 
-#歩行の変化点検出を行う
-#どのように行うかは未定，歩行の前後にウォーミングアップのような時間が存在するため
 """
+歩行の変化点検出を行う
+どのように行うかは未定，歩行の前後にウォーミングアップのような時間が存在するため
+Parameter
 	t_list	:圧縮後の時刻のリスト
 	p_list	:圧縮後の位置情報のリスト
 	d_list	:圧縮後の距離のリスト
@@ -192,18 +188,21 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 
 	print("特徴を計算します---")
 	feature_list =[]
+	behavior_dict = {"resting":0, "walking":1} # 行動ラベルの辞書
 	#####登録#####
 	for i, (time, pos, dis, vel, label) in enumerate(zip(t_list, p_list, d_list, v_list, l_list)):
-		if (label == 1): # 歩行
-			time_index = time
-			walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
-			max_vel = max(vel)
-			min_vel = min(vel)
-			
-			center, dis, mean_vel = extract_mean(pos, dis, vel)
-			ave_accumulated_distance = dis # 行動内での移動距離の１観測あたり
+		if (label == behavior_dict["walking"]): # 歩行
+			if (i != 0):
+				time_index += time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S")
+				walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
+				max_vel = max(vel)
+				min_vel = min(vel)
+				
+				center, dis, mean_vel = extract_mean(pos, dis, vel)
+				center = str(center[0]) + "-" + str(center[1])
+				ave_accumulated_distance = dis # 行動内での移動距離の１観測あたり
 
-		if (label == 0): # 休息
+		if (label == behavior_dict["resting"]): # 休息
 			###前後関係に着目した特徴の算出###
 			after_lat = pos[0][0]
 			after_lon = pos[0][1]
@@ -220,6 +219,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			previous_rest_length = (time[1] - time[0]).total_seconds() / 5 + 1
 			before_lat = pos[len(pos) - 1][0]
 			before_lon = pos[len(pos) - 1][1]
+			time_index = time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S") + " | "
 				
 	print("---特徴を計算しました")
 
@@ -257,16 +257,17 @@ def extract_mean(p_list, d_list, v_list):
 	dis = sum(ave_dis_list) / len(ave_dis_list)
 	vel = sum(ave_vel_list) / len(ave_vel_list)
 	return (lat,lon), dis, vel
-
-# 比を算出する
+"""
+比を算出する
+"""
 def calculate_rate(amount1, amount2):
 	if (amount2 != 0):
 		return amount1 / amount2
 	else:
 		return 0
 
-#移動速度に対して分類を行い視覚化を可能にする
 """
+移動速度に対して分類を行い視覚化を可能にする
 Parameter
 	v_list	:速さのリスト
 return
@@ -283,8 +284,12 @@ def calassify_velocity(v_list):
 			data_list.append("blue")
 	return data_list
 
-#圧縮した休息とその他をラベル付きで解凍する
 """
+
+"""
+
+"""
+圧縮した休息とその他をラベル付きで解凍する
 Parameter
 	zipped_t_list	:圧縮された時間のリスト
 	zipped_l_list	:圧縮により求められたラベルのリスト
@@ -313,19 +318,6 @@ def decompress(t_list, zipped_t_list, zipped_l_list):
 
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return l_list
-
-def decode2(l_list, new_l_list):
-	print(sys._getframe().f_code.co_name, "実行中")
-	index = 0
-	new_labels = []
-	for l in l_list:
-		if (l == 1):
-			new_labels.append(new_l_list[index] + 1)
-			index += 1
-		else:
-			new_labels.append(l)
-	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return new_labels
 
 if __name__ == '__main__':
 	filename = "behavior_classification/features.csv"
@@ -360,8 +352,11 @@ if __name__ == '__main__':
 		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
 		
 		# 各特徴
-		df = pd.read_csv(filepath_or_buffer = filename, encoding = "utf-8", sep = ",", header = 0, usecols = [0,1,2,3,4,5,6,7,9,11,12,13], names=('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'L', 'M', 'N'))
-		
+		df = pd.read_csv(filepath_or_buffer = filename, encoding = "utf-8", sep = ",", header = 0, usecols = [0,1,2,3,4,5,6,7,8,10,11,12], names=('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M')) # csv読み込み
+		plotting.show_3d_plot(sp.stats.zscore(df['C']), sp.stats.zscore(df['D']), sp.stats.zscore(df['I'])) # 3次元プロット
+		x, y = analyzing.reduce_dim_from3_to2(sp.stats.zscore(df['C']), sp.stats.zscore(df['D']), sp.stats.zscore(df['I'])) # 主成分分析 (3 → 2)
+		plotting.time_scatter(df['A'].tolist(), x, y) # 時系列プロット
+
 		# 軌跡描画
 		display = disp.Adjectory(True)
 		zipped_rest_list = extract_one_behavior(zipped_list, state = "resting") # 描画用に休息時間と重心だけのリストにする
@@ -369,16 +364,10 @@ if __name__ == '__main__':
 		zipped_walk_list = np.array(extract_one_behavior(zipped_list, state = "walking")) # 描画用に歩行時間と重心だけのリストにする
 		display.plot_moving_ad(zipped_walk_list[:,1:].tolist()) # 移動の軌跡をプロット
 		plt.show()
-		
-		#result = decode2([row[4] for row in zipped_list], pred)
-		
-		# 時系列描画
-		c_list = decompress(t_list, [row[0] for row in zipped_list], result)
-		plotting.scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
 
+		# --- 分析 ---
 		
-		#df = pd.read_csv(filepath_or_buffer = "features.csv", encoding = "utf-8", sep = ",", header = 0, usecols = [0,3,4,5,6,8,9,10], names=('A', 'D', 'E', 'F', 'G', 'I', 'J', 'K'))
-		#b, c = analyzing.reduce_dim_from3_to2(df['E'], df['F'], df['I'])
+
 		observation = np.array(c_list).reshape(-1, 1)
 		interface = hmm.hmm_interface(5)
 		interface.train_data(observation)
