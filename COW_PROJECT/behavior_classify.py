@@ -214,7 +214,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 				VA = 5 * calculate_rate(mean_vel, ave_accumulated_distance)
 				
 				###リストに追加###
-				feature_list.append([time_index, center, previous_rest_length, walking_length, ave_accumulated_distance, mean_vel, max_vel, min_vel, moving_distance, moving_direction, label, DA, AD, VA])
+				feature_list.append([time_index, center, previous_rest_length, walking_length, ave_accumulated_distance, mean_vel, max_vel, min_vel, moving_distance, moving_direction, DA, AD, VA])
 
 			###引継###
 			previous_rest_length = (time[1] - time[0]).total_seconds() / 5 + 1
@@ -227,7 +227,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####出力#####
 	with open(filename, "w", newline="") as f:
 		writer = csv.writer(f)
-		writer.writerow(("Time", "Walking place", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction", "Label", "D/A", "A/D", "V/A"))
+		writer.writerow(("Time", "Walking place", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction", "D/A", "A/D", "V/A"))
 		for feature in feature_list:
 			writer.writerow(feature)
 	print("---" + filename + "に出力しました")
