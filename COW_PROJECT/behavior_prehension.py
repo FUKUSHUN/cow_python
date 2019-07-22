@@ -15,6 +15,8 @@ import behavior_classification.loading as loading
 import behavior_classification.preprocessing as preprocessing
 import behavior_classification.plotting as plotting
 import behavior_classification.analyzing as analyzing
+import behavior_classification.regex as regex
+import behavior_classification.postprocessing as postprocessing
 import image.adjectory_image as disp
 
 """
@@ -273,7 +275,7 @@ Parameter
 return
 	それぞれが振り分けられたクラスタ ("red", "green", "blue")
 """
-def calassify_velocity(v_list):
+def classify_velocity(v_list):
 	data_list = []
 	for data in v_list:
 		if (choice_state(data) == 0):
@@ -283,41 +285,6 @@ def calassify_velocity(v_list):
 		else:
 			data_list.append("blue")
 	return data_list
-
-"""
-
-"""
-
-"""
-圧縮した休息とその他をラベル付きで解凍する
-Parameter
-	zipped_t_list	:圧縮された時間のリスト
-	zipped_l_list	:圧縮により求められたラベルのリスト
-	t_list	:圧縮前の時間のリスト（いつも5sの間隔で作られている訳ではないので元の時間のリストの時間を参照する）
-Return
-	l_list	:解凍したラベルのリスト
-"""
-def decompress(t_list, zipped_t_list, zipped_l_list):
-	print(sys._getframe().f_code.co_name, "実行中")
-	index = 0
-	l_list = []
-
-	start = zipped_t_list[0][0]
-	end = zipped_t_list[0][1]
-	label = zipped_l_list[0]
-	for time in t_list:
-		if (start <= time and time <= end):
-			l_list.append(label)
-		if (len(l_list) == len(t_list)):
-			break
-		if (end <= time):
-			index += 1
-			start = zipped_t_list[index][0]
-			end = zipped_t_list[index][1]
-			label = zipped_l_list[index]
-
-	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return l_list
 
 if __name__ == '__main__':
 	filename = "behavior_classification/features.csv"
@@ -337,14 +304,14 @@ if __name__ == '__main__':
 
 		# 時系列描画
 		#plotting.line_plot(t_list, v_list)
-		c_list = calassify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
+		c_list = classify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
 		plotting.scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
 		plotting.scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
 
 		# 圧縮操作
 		zipped_list = compress(t_list, p_list, d_list, v_list) # 圧縮する
 
-		#c_list = calassify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
+		#c_list = classify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
 		#plotting.scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 		#plotting.scatter_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 
@@ -366,15 +333,19 @@ if __name__ == '__main__':
 		plt.show()
 
 		# --- 分析 ---
-		
-
-		observation = np.array(c_list).reshape(-1, 1)
-		interface = hmm.hmm_interface(5)
+		observation = np.array([x,y]).T
+		interface = hmm.hmm_interface(4)
 		interface.train_data(observation)
 		print("遷移行列: ",interface.transition_matrix)
 		print("出力期待値: ",interface.means)
 		print("初期確率: ",interface.init_matrix)
 		result = interface.predict_data(observation)
-		c_list = decompress(t_list, [row[0] for row in zipped_list], result)
-		plotting.scatter_plot(t_list, v_list, c_list) # 時系列で速さの散布図を表示
+		plotting.time_scatter(df['A'].tolist(), x, y, result)
+
+		# --- 復元 ---
+		zipped_t_list = regex.str_to_datetime(df['A'].tolist())
+		result = postprocessing.make_labels(result)
+		new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, result)
+		new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
+		plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
 		

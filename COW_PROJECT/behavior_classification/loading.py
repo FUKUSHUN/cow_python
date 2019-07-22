@@ -109,8 +109,3 @@ def select_used_time(time_list, position_list, distance_list, velocity_list, ang
     print("The length of time_list: ", len(new_time_list), "\n")
     return new_time_list, new_position_list, new_distance_list, new_velocity_list, new_angle_list
 
-"""
-特徴抽出したCSVファイル (圧縮済み) から元の時系列データを作成する
-Parameter
-    filename    : csvファイルのパス (str)
-"""
