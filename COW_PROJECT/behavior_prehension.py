@@ -7,6 +7,8 @@ import datetime
 import sys
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from sklearn.externals import joblib
+import pickle
 
 # 自作クラス
 import cows.geography as geo
@@ -286,6 +288,16 @@ def classify_velocity(v_list):
 			data_list.append("blue")
 	return data_list
 
+"""
+モデルを使用して分類を行う
+"""
+def use_model():
+	filename = "behavior_classification/mp/model.pickle"
+	filename2 = "behavior_classification/mp/model2.pickle"
+
+	labels = []
+
+
 if __name__ == '__main__':
 	filename = "behavior_classification/features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
@@ -333,14 +345,29 @@ if __name__ == '__main__':
 		plt.show()
 
 		# --- 分析 ---
+		filename = "behavior_classification/mp/model.pickle"
+		filename2 = "behavior_classification/mp/model2.pickle"
+	
+		labels = []
+		model = joblib.load(filename)
+		model2 = joblib.load(filename)
+		x1, x2, x3, x4, x5 = df['C'].tolist(), df['D'].tolist(), df['F'].tolist(), df['G'].tolist(), df['I'].tolist()
+		for a, b, c, d, e in zip(x1, x2, x3, x4, x5):
+			result = model.fit([a, b, c, d, e])
+			result2 = model2.fit([a, b, c, d, e])
+			labels.append(result)
+			labels.append(result2)
+			print(result)
+		
 		observation = np.array([x,y]).T
-		interface = hmm.hmm_interface(4)
+		interface = hmm.hmm_interface(5)
 		interface.train_data(observation)
 		print("遷移行列: ",interface.transition_matrix)
 		print("出力期待値: ",interface.means)
 		print("初期確率: ",interface.init_matrix)
 		result = interface.predict_data(observation)
 		plotting.time_scatter(df['A'].tolist(), x, y, result)
+		
 
 		# --- 復元 ---
 		zipped_t_list = regex.str_to_datetime(df['A'].tolist())

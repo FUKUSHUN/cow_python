@@ -98,7 +98,7 @@ def select_used_time(time_list, position_list, distance_list, velocity_list, ang
     new_angle_list = []
     for (t, p, d, v, a) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
         t = t + datetime.timedelta(hours = 9)
-        if(t.hour < 9 or 12 < t.hour):
+        if(t.hour < 9 or 11 < t.hour):
             new_time_list.append(t)
             new_position_list.append(p)
             new_distance_list.append(d) 
