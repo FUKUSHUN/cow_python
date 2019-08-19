@@ -19,8 +19,8 @@ w = pd.DataFrame(train_data_set2.drop("Target2", axis = 1))
 z = pd.DataFrame(train_data_set2["Target2"])
 
 #説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
-X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.15)
-W_train, W_test, Z_train, Z_test = train_test_split(w,z,test_size=0.15)
+X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.10)
+W_train, W_test, Z_train, Z_test = train_test_split(w,z,test_size=0.10)
 
 
 #データの整形
@@ -33,8 +33,8 @@ Y_test = keras.utils.to_categorical(Y_test, 2)
 W_train = W_train.astype(np.float)
 W_test = W_test.astype(np.float)
 
-Z_train = keras.utils.to_categorical(Z_train, 4)
-Z_test = keras.utils.to_categorical(Z_test, 4)
+Z_train = keras.utils.to_categorical(Z_train, 3)
+Z_test = keras.utils.to_categorical(Z_test, 3)
 
 
 # Model setting
@@ -57,7 +57,7 @@ model.compile(loss = 'categorical_crossentropy', optimizer=SGD(lr = 0.01), metri
 # Model setting
 n_in =  5
 n_hidden = 3
-n_out = 4
+n_out = 3
 
 model2 = Sequential()
 model2.add(Dense(n_hidden, input_dim = n_in))
@@ -73,12 +73,12 @@ model2.compile(loss = 'categorical_crossentropy', optimizer=SGD(lr = 0.01), metr
 
 
 # Model learing
-epochs = 100
-batch_size = 10
+epochs = 120
+batch_size = 50
 model.fit(X_train, Y_train, epochs=epochs, batch_size=batch_size)
 
-epochs = 100
-batch_size = 10
+epochs = 120
+batch_size = 50
 model2.fit(W_train, Z_train, epochs=epochs, batch_size=batch_size)
 
 
@@ -90,7 +90,7 @@ print(loss_and_metrics2)
 
 
 # モデルを保存する
-filename = 'model.pickle'
-pickle.dump(model, open(filename, 'wb'))
-filename2 = 'model2.pickle'
-pickle.dump(model, open(filename2, 'wb'))
+filename1 = 'mp/model.pickle'
+pickle.dump(model, open(filename1, 'wb'))
+filename2 = 'mp/model2.pickle'
+pickle.dump(model2, open(filename2, 'wb'))
