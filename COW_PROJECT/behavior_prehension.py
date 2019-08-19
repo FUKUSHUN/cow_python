@@ -288,16 +288,6 @@ def classify_velocity(v_list):
 			data_list.append("blue")
 	return data_list
 
-"""
-モデルを使用して分類を行う
-"""
-def use_model():
-	filename = "behavior_classification/mp/model.pickle"
-	filename2 = "behavior_classification/mp/model2.pickle"
-
-	labels = []
-
-
 if __name__ == '__main__':
 	filename = "behavior_classification/features.csv"
 	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
@@ -345,20 +335,26 @@ if __name__ == '__main__':
 		plt.show()
 
 		# --- 分析 ---
-		filename = "behavior_classification/mp/model.pickle"
-		filename2 = "behavior_classification/mp/model2.pickle"
+		filename1 = "behavior_classification/rf/model.pickle"
+		filename2 = "behavior_classification/rf/model2.pickle"
 	
 		labels = []
-		model = joblib.load(filename)
-		model2 = joblib.load(filename)
+		model1 = joblib.load(filename1)
+		model2 = joblib.load(filename2)
 		x1, x2, x3, x4, x5 = df['C'].tolist(), df['D'].tolist(), df['F'].tolist(), df['G'].tolist(), df['I'].tolist()
-		for a, b, c, d, e in zip(x1, x2, x3, x4, x5):
-			result = model.fit([a, b, c, d, e])
-			result2 = model2.fit([a, b, c, d, e])
-			labels.append(result)
-			labels.append(result2)
-			print(result)
-		
+		x = np.array((x1, x2, x3, x4, x5)).T
+		result1 = model1.predict(x)
+		result2 = model2.predict(x)
+		print(result1)
+		print(result2)		
+		for a, b in zip(result1, result2):
+			#print(a, b)	
+			#labels.append(np.argmax(a))
+			#labels.append(np.argmax(b))
+			labels.append(a)
+			labels.append(b)
+
+		"""
 		observation = np.array([x,y]).T
 		interface = hmm.hmm_interface(5)
 		interface.train_data(observation)
@@ -367,12 +363,13 @@ if __name__ == '__main__':
 		print("初期確率: ",interface.init_matrix)
 		result = interface.predict_data(observation)
 		plotting.time_scatter(df['A'].tolist(), x, y, result)
-		
+		"""
 
 		# --- 復元 ---
 		zipped_t_list = regex.str_to_datetime(df['A'].tolist())
-		result = postprocessing.make_labels(result)
-		new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, result)
+		#result = postprocessing.make_labels(result)
+		new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
 		new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
+		#print(labels)
 		plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
 		
