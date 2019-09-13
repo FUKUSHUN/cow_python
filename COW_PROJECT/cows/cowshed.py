@@ -29,7 +29,7 @@ class Cowshed:
 		for cow_id in cow_id_list:
 			c = cow.Cow(int(cow_id), dt)
 			self.cow_list.append(c)
-		print("finish reading cow information : " + self.date)
+		print("finished reading cow information : " + self.date)
 		
 	#csvファイルからその日第一放牧場にいた牛の個体番号のリストを取得する
 	def __get_cow_list(self):

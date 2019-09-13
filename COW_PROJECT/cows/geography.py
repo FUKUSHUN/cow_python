@@ -68,6 +68,8 @@ def get_cos_sim(g1_after:gpsdata.GpsNmeaData, g2_after:gpsdata.GpsNmeaData, g1:g
     (方位についてはサイトの1/21時点の表記atan2(y, x)をatan2(x, y)に変換して計算している)
 """			
 def get_distance_and_direction(lat1, lon1, lat2, lon2, is_translated):
+	latt1, longi1 = lat1, lon1
+	latt2, longi2 = lat2, lon2
 	#同一座標の時
 	if lon1 == lon2 and lat1 == lat2:
 		return 0, -1
@@ -84,7 +86,7 @@ def get_distance_and_direction(lat1, lon1, lat2, lon2, is_translated):
 		try:
 			d = r * math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1))
 		except ValueError:
-			print("2地点がほとんど同一です", lat1, lon1, lat2, lon2)
+			print("2地点がほとんど同一です", latt1, longi1, latt2, longi2)
 			d = r * math.acos(1.0) #誤差で1を超える場合がある (結果的に距離は0になる)
 		if math.isnan(d):
 			print("距離がNanです")

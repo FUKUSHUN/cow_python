@@ -5,7 +5,7 @@ import numpy as np
 import datetime
 
 def read_values(filepath):
-    count = 18 #何個分の移動平均をとるか
+    count = 6 #何個分の移動平均をとるか
     df = pd.read_csv(filepath, header = 0, index_col=0)
     header = ["TIME"] + list(df.head(0))
     df = df.fillna(0) #nanを0に
@@ -39,7 +39,19 @@ def write_values(filename, header, index_list, data_list):
     return
 
 if __name__ == '__main__':
-    r_filename = "csv/weight.csv"
-    w_filename = "csv/weight_m.csv"
+    r_filename = "for_web/weight_rssi.csv"
+    w_filename = "for_web/approached_value_rssi.csv"
+    w_filename2 = "for_web/"
     header, times, values = read_values(r_filename)
     write_values(w_filename, header, times, values)
+
+
+    df = pd.read_csv(filepath_or_buffer = w_filename, encoding = "utf-8", sep = ",", header = 0) # csv読み込み
+    time = df.iloc[:,0] # 1列目全行
+    cows = df.iloc[:,1:] # 1列目以外全行
+    
+    for cow_id, cow in cows.iteritems():
+        w_filename3 = w_filename2 + str(cow_id) + ".csv"
+        df2 = pd.DataFrame({'Time':time, 'Value':cow})
+        df2.to_csv(w_filename3, header=False, index=False)
+        

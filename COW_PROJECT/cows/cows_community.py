@@ -8,7 +8,6 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import cows_relation as cr #自作クラス
-import gps.gps_nmea_data_list as gpslist #自作クラス
 
 """
     Louvainアルゴリズムを用いてコミュニティを生成する

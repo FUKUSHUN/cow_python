@@ -16,7 +16,7 @@ class TwoCowsRelation:
     cow_gps_list2:gpslist.GpsNmeaDataList
     """
         2頭間の関係を見るクラスで二つのgps_listが必要
-        CowsRelationの分社化みたいなもの (コミュニティ生成などで外部から呼び出されることもある. だから分社化した)
+        CowsRelationの中でも2頭間の関係 (コミュニティ生成などで外部から呼び出されることもある. だからクラスを分けた)
     """
     def __init__(self, g_list1, g_list2):
         self.cow_gps_list1 = g_list1
