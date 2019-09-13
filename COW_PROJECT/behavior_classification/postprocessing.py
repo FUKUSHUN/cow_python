@@ -18,7 +18,7 @@ def make_labels(results):
 	return new_results
 
 """
-特徴抽出したCSVファイル (圧縮済み) から元の時系列データを作成 (解凍) する
+特徴抽出したCSVファイル (圧縮済み) から元の時系列データを作成 (展開) する
 Parameter
     t_list    : 元の時系列データ
 	zipped_t_list	: 圧縮後の時系列データ
