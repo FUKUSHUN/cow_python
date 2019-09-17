@@ -335,8 +335,8 @@ if __name__ == '__main__':
 		plt.show()
 
 		# --- 分析 ---
-		filename1 = "behavior_classification/svm/model.pickle"
-		filename2 = "behavior_classification/svm/model2.pickle"
+		filename1 = "behavior_classification/rf/model.pickle"
+		filename2 = "behavior_classification/rf/model2.pickle"
 	
 		labels = []
 		model1 = joblib.load(filename1)
@@ -354,16 +354,15 @@ if __name__ == '__main__':
 			labels.append(a)
 			labels.append(b)
 
-		"""
-		observation = np.array([x,y]).T
-		interface = hmm.hmm_interface(5)
-		interface.train_data(observation)
-		print("遷移行列: ",interface.transition_matrix)
-		print("出力期待値: ",interface.means)
-		print("初期確率: ",interface.init_matrix)
-		result = interface.predict_data(observation)
-		plotting.time_scatter(df['A'].tolist(), x, y, result)
-		"""
+		# --- 隠れマルコフモデルに当てはめる ---
+		#observation = np.array([x,y]).T
+		#interface = hmm.hmm_interface(5)
+		#interface.train_data(observation)
+		#print("遷移行列: ",interface.transition_matrix)
+		#print("出力期待値: ",interface.means)
+		#print("初期確率: ",interface.init_matrix)
+		#result = interface.predict_data(observation)
+		#plotting.time_scatter(df['A'].tolist(), x, y, result)
 
 		# --- 復元 ---
 		zipped_t_list = regex.str_to_datetime(df['A'].tolist())
@@ -372,4 +371,3 @@ if __name__ == '__main__':
 		new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
 		#print(labels)
 		plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
-		
