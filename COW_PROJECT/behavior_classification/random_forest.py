@@ -11,7 +11,7 @@ from sklearn import tree # 可視化用
 import pydotplus as pdp # 可視化用
 
 
-filename = "training_data.csv"
+filename = "training_data/training_data.csv"
 data_set = pd.read_csv(filename, sep = ",", header = None, usecols = [2,3,5,6,8,14,15], names=('RTime', 'WTime', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2'))
 train_data_set1 = data_set.drop("Target2", axis = 1)
 train_data_set2 = data_set.drop("Target1", axis = 1)
@@ -74,4 +74,3 @@ graph = pdp.graph_from_dot_data(dot_data1)
 graph.write_png(filename1)
 graph = pdp.graph_from_dot_data(dot_data2)
 graph.write_png(filename2)
-
