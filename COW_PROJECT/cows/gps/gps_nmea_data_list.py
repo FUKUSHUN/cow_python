@@ -39,40 +39,48 @@ class GpsNmeaDataList:
 		linear_flag	: 線形補間するかどうか
 	"""
 	def read_from_database(self, date:datetime, cow_id:int, linear_flag):
+		is_exist = True
 		start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
 		end = start + datetime.timedelta(days = 1)
 		filename = self._db_file_path + self.__make_file_format(start) + ".db"
 		conn = sqlite3.connect(filename)
-		c = conn.cursor()
-		sql = "SELECT * FROM `" + str(cow_id) + "` WHERE time >= " + "'" + start.strftime("%Y/%m/%d %H:%M:%S") + "'" + "AND time < " + "'" + end.strftime("%Y/%m/%d %H:%M:%S") + "'" #SQLの文章
-		itr = c.execute(sql) #SQL文の実行
-		g_before = None
-		for row in itr:
-			dt = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S")
-			g = gps.GpsNmeaData(dt, row[1], row[2], row[3])
-			if g_before is not None:
-				#速さが閾値self._error_threshold以下の時は前回の場所を踏襲
-				if (float(row[3]) * 1852 / 3600) < self._error_threshold:
-					g_list = self.__normal_interpolation(g_before, g)
-					for g_i in g_list:
-						self.gps_list.append(g_i)
-					lat, lon, _ = g_before.get_gps_info(g_before.get_datetime())
-					g = gps.GpsNmeaData(dt, lat, lon, row[3])
-				#普通の線形補間
-				elif linear_flag:
-					g_list = self.__linear_interpolation(g_before, g)
-					for g_i in g_list:
-						self.gps_list.append(g_i)
-				#線形補間なし (他の牛との時間合わせのために1sごとに出力する)
+		try:
+			c = conn.cursor()
+			sql = "SELECT * FROM `" + str(cow_id) + "` WHERE time >= " + "'" + start.strftime("%Y/%m/%d %H:%M:%S") + "'" + "AND time < " + "'" + end.strftime("%Y/%m/%d %H:%M:%S") + "'" #SQLの文章
+			itr = c.execute(sql) #SQL文の実行
+			g_before = None
+			for row in itr:
+				dt = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S")
+				g = gps.GpsNmeaData(dt, row[1], row[2], row[3])
+				if g_before is not None:
+					#速さが閾値self._error_threshold以下の時は前回の場所を踏襲
+					if (float(row[3]) * 1852 / 3600) < self._error_threshold:
+						g_list = self.__normal_interpolation(g_before, g)
+						for g_i in g_list:
+							self.gps_list.append(g_i)
+						lat, lon, _ = g_before.get_gps_info(g_before.get_datetime())
+						g = gps.GpsNmeaData(dt, lat, lon, row[3])
+					#普通の線形補間
+					elif linear_flag:
+						g_list = self.__linear_interpolation(g_before, g)
+						for g_i in g_list:
+							self.gps_list.append(g_i)
+					#線形補間なし (他の牛との時間合わせのために1sごとに出力する)
+					else:
+						g_list = self.__normal_interpolation(g_before, g)
+						for g_i in g_list:
+							self.gps_list.append(g_i)
 				else:
-					g_list = self.__normal_interpolation(g_before, g)
-					for g_i in g_list:
-						self.gps_list.append(g_i)
-			else:
-				self.gps_list.append(g)
-			g_before = g
+					self.gps_list.append(g)
+				g_before = g
+		except sqlite3.OperationalError:
+			print("データベースが存在しません: ", cow_id)
+			is_exist = False
 		conn.close()
-		return
+		if (is_exist):
+			return True
+		else:
+			return False
 		
 	#1s間隔のデータに直すために線形補間を行う (緯度・経度の線形補間であることを留意)
 	def __linear_interpolation(self, start:gps.GpsNmeaData, end:gps.GpsNmeaData):

@@ -15,7 +15,7 @@ from sklearn.model_selection import cross_val_score # 交差検証用
 
 
 filename = "training_data/training_data.csv"
-data_set = pd.read_csv(filename, sep = ",", header = None, usecols = [2,3,5,6,8,14,15], names=('RTime', 'WTime', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2'))
+data_set = pd.read_csv(filename, sep = ",", header = None, usecols = [1,2,3,4,5,6,7,9,12,13], names=('RCategory','WCategory', 'RTime', 'WTime', 'AccumratedDis', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2'))
 train_data_set1 = data_set.drop("Target2", axis = 1)
 train_data_set2 = data_set.drop("Target1", axis = 1)
 
