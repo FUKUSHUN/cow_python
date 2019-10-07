@@ -323,4 +323,6 @@ def output_features(filename, date:datetime, cow_id):
 
 		# ---特徴抽出---
 		output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
-		
+		return True # 特徴出力に成功したのでTrueを返す
+	else:
+		return False # データがなければFalseを返す
