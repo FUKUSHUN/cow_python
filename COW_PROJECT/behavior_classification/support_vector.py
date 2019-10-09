@@ -23,13 +23,13 @@ W_train, W_test, Z_train, Z_test = train_test_split(w,z,test_size=0.15)
 X_train, X_test, Y_train, Y_test = X_train.values, X_test.values, np.ravel(Y_train.values), np.ravel(Y_test.values)
 W_train, W_test, Z_train, Z_test = W_train.values, W_test.values, np.ravel(Z_train.values), np.ravel(Z_test.values)
 
-model1 = SVC(C=1.0, kernel='rbf', gamma=0.05, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
+model1 = SVC(C=1.0, kernel='rbf', gamma=0.05, random_state=0, probability=True) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 model1 = OneVsRestClassifier(model1)
 model1 = model1.fit(X_train, Y_train)
 prediction = model1.predict(X_test)
 evaluation1 = accuracy_score(prediction, Y_test)
 
-model2 = SVC(C=1.0, kernel='rbf', gamma=0.05, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
+model2 = SVC(C=1.0, kernel='rbf', gamma=0.05, random_state=0, probability=True) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 model2 = OneVsRestClassifier(model2)
 model2 = model2.fit(W_train, Z_train)
 prediction = model2.predict(W_test)
@@ -39,7 +39,7 @@ print(evaluation1)
 print(evaluation2)
 
 # モデルを保存する
-#filename1 = 'svm/model.pickle'
-#pickle.dump(model1, open(filename1, 'wb'))
-#filename2 = 'svm/model2.pickle'
-#pickle.dump(model2, open(filename2, 'wb'))
+filename1 = 'svm/model.pickle'
+pickle.dump(model1, open(filename1, 'wb'))
+filename2 = 'svm/model2.pickle'
+pickle.dump(model2, open(filename2, 'wb'))
