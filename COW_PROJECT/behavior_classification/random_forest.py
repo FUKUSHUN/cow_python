@@ -1,18 +1,16 @@
 #-*- encoding:utf-8 -*-
 import numpy as np
 import pandas as pd
-import csv
-import datetime
 import sys
 import os
 import pickle
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier # ランダムフォレスト
 from sklearn.metrics import (roc_curve, auc, accuracy_score)
-from sklearn.model_selection import StratifiedKFold # 交差検証用
-from sklearn.model_selection import cross_val_score # 交差検証用
 from sklearn import tree # 可視化用
 import pydotplus as pdp # 可視化用
+
+# 自作モジュール
+import evaluation_of_classifier as evaluation
 
 
 if __name__ == '__main__':
@@ -20,30 +18,21 @@ if __name__ == '__main__':
     names = ('RCategory','WCategory', 'RTime', 'WTime', 'AccumulatedDis', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2')
     filename = os.path.abspath('./') + "/training_data/training_data.csv"
     data_set = pd.read_csv(filename, sep = ",", header = None, usecols = usecols, names=names)
-    train_data_set1 = data_set.drop("Target2", axis = 1)
-    train_data_set2 = data_set.drop("Target1", axis = 1)
+    data_set = data_set.sample(frac=1, random_state=0).reset_index(drop=True) # データをシャッフル
+    train_dataset, test_dataset = data_set[:int(0.5 * len(data_set))], data_set[int(0.5 * len(data_set)):] # 訓練データとテストデータに分割
+    train_dataset1, test_dataset1 = train_dataset.drop("Target2", axis = 1), test_dataset.drop("Target2", axis = 1) # 停止セグメント
+    train_dataset2, test_dataset2 = train_dataset.drop("Target1", axis = 1), test_dataset.drop("Target1", axis = 1) # 活動セグメント
 
-    x = pd.DataFrame(train_data_set1.drop("Target1", axis = 1))
-    y = pd.DataFrame(train_data_set1["Target1"])
-
-    w = pd.DataFrame(train_data_set2.drop("Target2", axis = 1))
-    z = pd.DataFrame(train_data_set2["Target2"])
-
-    # 説明変数・目的変数をそれぞれ訓練データ・テストデータに分割
-    X_train, X_test, Y_train, Y_test = train_test_split(x,y,test_size=0.50)
-    W_train, W_test, Z_train, Z_test = train_test_split(w,z,test_size=0.50)
-    X_train, X_test, Y_train, Y_test = X_train.values, X_test.values, np.ravel(Y_train.values), np.ravel(Y_test.values)
-    W_train, W_test, Z_train, Z_test = W_train.values, W_test.values, np.ravel(Z_train.values), np.ravel(Z_test.values)
-
+    # モデルのfitとevaluate
     model1 = RandomForestClassifier(random_state=0, max_depth=5, n_estimators=10) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
-    model1 = model1.fit(X_train, Y_train)
-    prediction = model1.predict(X_test)
-    evaluation1 = accuracy_score(prediction, Y_test)
+    model1 = evaluation.learn(model1, train_dataset1, "Target1")
+    evaluation1 = evaluation.evaluate(model1, test_dataset1, "Target1")
+    evaluation.output_csv("./rf/validation_r.csv", model1, test_dataset1, "Target1", ["REST_Proba", "GRAZE_Proba"])
 
     model2 = RandomForestClassifier(random_state=0, max_depth=5, n_estimators=10) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
-    model2 = model2.fit(W_train, Z_train)
-    prediction = model2.predict(W_test)
-    evaluation2 = accuracy_score(prediction, Z_test)
+    model2 = evaluation.learn(model2, train_dataset2, "Target2")
+    evaluation2 = evaluation.evaluate(model2, test_dataset2, "Target2")
+    evaluation.output_csv("./rf/validation_a.csv", model2, test_dataset2, "Target2", ["REST_Proba", "GRAZE_Proba", "WALK_Proba"])
 
     print(evaluation1)
     print(evaluation2)
@@ -54,6 +43,7 @@ if __name__ == '__main__':
     filename2 = 'rf/model2.pickle'
     pickle.dump(model2, open(filename2, 'wb'))
 
+    """
     # 生成された木の1個目を可視化
     estimator1 = model1.estimators_[0]
     estimator2 = model1.estimators_[0]
@@ -81,3 +71,4 @@ if __name__ == '__main__':
     graph.write_png(filename1)
     graph = pdp.graph_from_dot_data(dot_data2)
     graph.write_png(filename2)
+    """

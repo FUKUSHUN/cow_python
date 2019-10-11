@@ -224,4 +224,3 @@ if __name__ == '__main__':
     # --- テストデータで精度の確認 ---
     print(evaluate(rf1, test_dataset1, "Target1"))
     print(evaluate(rf2, test_dataset2, "Target2"))
-
