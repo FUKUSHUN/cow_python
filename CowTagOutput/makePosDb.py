@@ -59,11 +59,14 @@ class PosDb:
 	def __readCsv(self):
 		#csv読み込み (見つからない場合のエラー回避)
 		try:
-			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "\\" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'),index_col = 0, engine='python')
+			df = pd.read_table(filepath_or_buffer = self.parentPath + str(self.gpsId) + "\\" + str(self.date) + ".txt", encoding = "utf-8", sep = ",", header = None, usecols = [0,1,3,5,7,9], names=('A', 'B', 'C', 'D', 'E','F'), index_col = 0, engine='python')
 			df = df.fillna(0) #欠損等は0で補完
 			return df
 		except FileNotFoundError:
 			#print(self.parentPath+ str(self.gpsId) + "\\" + str(self.date) + ".txt")
+			df = pd.DataFrame([])
+			return df
+		except UnicodeDecodeError:
 			df = pd.DataFrame([])
 			return df
 		except pd.errors.ParserError:

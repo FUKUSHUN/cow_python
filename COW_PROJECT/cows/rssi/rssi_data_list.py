@@ -5,7 +5,7 @@ import sqlite3
 import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import gps_nmea_data as gps #自作クラス
+import rssi_data as rssi #自作クラス
 
 class RSSIDataList:
     _csv_file_path = "for_web/rssi2latlon/"
@@ -22,7 +22,7 @@ class RSSIDataList:
 		
     
     def get_sub_list(self, start:datetime, end:datetime):
-        """gpsのリストのサブリストを取得する (時間順に並んでいることが想定されている)
+        """ rssiのリストのサブリストを取得する (時間順に並んでいることが想定されている)
             return------
                 list	: rasiのデータリスト (このクラスではないので注意) """
         sublist = []
@@ -48,8 +48,7 @@ class RSSIDataList:
                     time = datetime.datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%S")
                     lat = float(row[1])
                     lon = float(row[2])
-                    vel = 1 # 適当
-                    g = gps.GpsNmeaData(time, lat, lon, vel)
+                    g = rssi.RSSIData(time, lat, lon)
                     self.rssi_list.append(g)
             index += 1
         return
