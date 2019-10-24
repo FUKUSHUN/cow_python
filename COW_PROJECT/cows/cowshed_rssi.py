@@ -12,12 +12,13 @@ import cow_rssi #自作クラス
 class Cowshed:
     date:str #YYYY/mm/dd
     cow_list:list #Cow型のリスト
-    csv_path = "for_web/rssi2latlon/"
+    csv_path = ""
     
 
-    def __init__(self, date:datetime):
+    def __init__(self, date:datetime, csv_path):
         """ その日いた牛を登録する
 		    日付をキーにしてコンストラクタでRSSIデータの読み込み """
+        self.csv_path = csv_path
         self.cow_list = []
         self.date = date.strftime("%Y/%m/%d")
         self.csv_path += date.strftime("%Y%m%d") + "/"

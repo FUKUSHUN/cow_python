@@ -26,14 +26,14 @@ X, Y = x.values, np.ravel(y.values)
 # 交差検証1
 tr1 = DecisionTreeClassifier(random_state=0)
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 tr1_score = cross_val_score(tr1, X, Y, cv=fold)
 print("決定木: ", tr1_score)
 print(mean(tr1_score))
 
 rf1 = RandomForestClassifier(random_state=0, max_depth=5, n_estimators=10) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 rf1_score = cross_val_score(rf1, X, Y, cv=fold)
 print("ランダムフォレスト: ", rf1_score)
 print(mean(rf1_score))
@@ -41,14 +41,14 @@ print(mean(rf1_score))
 svm1 = SVC(C=1.0, kernel='rbf', gamma=0.01, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 svm1 = OneVsRestClassifier(svm1)
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 svm1_score = cross_val_score(svm1, X, Y, cv=fold)
 print("SVM: ", svm1_score)
 print(mean(svm1_score))
 
-bst1 = GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=3, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
+bst1 = GradientBoostingClassifier(n_estimators=50, learning_rate=1.0, max_depth=1, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 bst1_score = cross_val_score(bst1, X, Y, cv=fold)
 print("勾配ブースティング: ", bst1_score)
 print(mean(bst1_score))
@@ -60,14 +60,14 @@ W, Z = w.values, np.ravel(z.values)
 # 交差検証2
 tr2 = DecisionTreeClassifier(random_state=0)
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 tr2_score = cross_val_score(tr2, W, Z, cv=fold)
 print("決定木: ", tr2_score)
 print(mean(tr2_score))
 
 rf2 = RandomForestClassifier(random_state=0, max_depth=5, n_estimators=10) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 rf2_score = cross_val_score(rf2, W, Z, cv=fold)
 print("ランダムフォレスト: ", rf2_score)
 print(mean(rf2_score))
@@ -75,14 +75,14 @@ print(mean(rf2_score))
 svm2 = SVC(C=1.0, kernel='rbf', gamma=0.01, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 svm2 = OneVsRestClassifier(svm2)
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 svm2_score = cross_val_score(svm2, W, Z, cv=fold)
 print("SVM: ", svm2_score)
 print(mean(svm2_score))
 
-bst2 = GradientBoostingClassifier(n_estimators=10, learning_rate=1.0, max_depth=3, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
+bst2 = GradientBoostingClassifier(n_estimators=50, learning_rate=1.0, max_depth=1, random_state=0) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
 #fold = StratifiedKFold(n_splits=5)
-fold = ShuffleSplit(n_splits=5, random_state=0)
+fold = ShuffleSplit(n_splits=5)
 bst2_score = cross_val_score(bst2, W, Z, cv=fold)
 print("勾配ブースティング: ", bst2_score)
 print(mean(bst2_score))

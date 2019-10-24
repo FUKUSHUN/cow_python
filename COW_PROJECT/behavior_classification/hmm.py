@@ -10,7 +10,7 @@ class hmm_interface:
     init_matrix = None
         
     def __init__(self, n_state):
-        self.model = hmm.GaussianHMM(n_components=n_state, algorithm="viterbi",covariance_type="full")
+        self.model = hmm.GaussianHMM(n_components=n_state, algorithm="viterbi", covariance_type="full")
         #emission_matrix = None
         self.means = None
         self.covars = None
@@ -23,6 +23,9 @@ class hmm_interface:
         self.covars = self.model.covars_
         self.transition_matrix = self.model.transmat_
         self.init_matrix = self.model.startprob_
+        print("遷移行列: ", self.transition_matrix)
+        print("出力期待値: ", self.means)
+        print("初期確率: ", self.init_matrix)
 
     def predict_data(self, observation):
         self.model.means_ = self.means

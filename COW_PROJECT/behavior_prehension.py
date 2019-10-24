@@ -39,11 +39,11 @@ if __name__ == '__main__':
 			t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 			
 			# 畳み込み
-			v_list = preprocessing.convolution(v_list, 3)
-			d_list = preprocessing.convolution(d_list, 3)
-			t_list = preprocessing.elimination(t_list, 3)
-			p_list = preprocessing.elimination(p_list, 3)
-			a_list = preprocessing.elimination(a_list, 3)
+			#v_list = preprocessing.convolution(v_list, 3)
+			#d_list = preprocessing.convolution(d_list, 3)
+			#t_list = preprocessing.elimination(t_list, 3)
+			#p_list = preprocessing.elimination(p_list, 3)
+			#a_list = preprocessing.elimination(a_list, 3)
 
 			# 時系列描画
 			#plotting.line_plot(t_list, v_list)
@@ -75,41 +75,39 @@ if __name__ == '__main__':
 			zipped_walk_list = np.array(output_features.extract_one_behavior(zipped_list, state = "walking")) # 描画用に歩行時間と重心だけのリストにする
 			display.plot_moving_ad(zipped_walk_list[:,1:].tolist()) # 移動の軌跡をプロット
 			plt.show()
-
+			
 			# --- 分析 ---
-			filename1 = "behavior_classification/rf/model.pickle"
-			filename2 = "behavior_classification/rf/model2.pickle"
+			filename1 = "behavior_classification/bst/model.pickle"
+			filename2 = "behavior_classification/bst/model2.pickle"
 		
 			labels = []
+			probs = []
 			model1 = joblib.load(filename1)
 			model2 = joblib.load(filename2)
 			x1, x2, x3, x4, x5, x6, x7, x8 = df['RCategory'].tolist(), df['WCategory'].tolist(), df['RTime'].tolist(), df['WTime'].tolist(), df['AccumulatedDis'].tolist(), df['Velocity'].tolist(), df['MVelocity'].tolist(), df['Distance'].tolist()
 			x = np.array((x1, x2, x3, x4, x5, x6, x7, x8)).T
 			result1 = model1.predict(x)
 			result2 = model2.predict(x)
+			prob1 = model1.predict_proba(x)
+			prob2 = model2.predict_proba(x)
 			print(result1)
 			print(result2)	
-			for a, b in zip(result1, result2):
-				#print(a, b)	
-				#labels.append(np.argmax(a))
-				#labels.append(np.argmax(b))
+			for a, b, c, d in zip(result1, result2, prob1, prob2):
 				labels.append(a)
 				labels.append(b)
-
-			# --- 隠れマルコフモデルに当てはめる ---
-			#observation = np.array([x,y]).T
-			#interface = hmm.hmm_interface(5)
-			#interface.train_data(observation)
-			#print("遷移行列: ",interface.transition_matrix)
-			#print("出力期待値: ",interface.means)
-			#print("初期確率: ",interface.init_matrix)
-			#result = interface.predict_data(observation)
-			#plotting.time_scatter(df['A'].tolist(), x, y, result)
+				probs.append(np.insert(c, 2, 0.0))
+				probs.append(d)
 
 			# --- 復元 ---
 			zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
-			#result = postprocessing.make_labels(result)
 			new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
+			_, probs = postprocessing.decompress(t_list, zipped_t_list, probs)
+
+			# --- 隠れマルコフモデルに当てはめる ---
+			#interface = hmm.hmm_interface(3)
+			#interface.train_data(probs)
+			#labels = interface.predict_data(probs)
+
 			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
-			#print(labels)
 			plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
+			

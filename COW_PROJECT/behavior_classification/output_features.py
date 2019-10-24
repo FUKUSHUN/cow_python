@@ -33,16 +33,14 @@ import image.adjectory_image as disp
 
 
 def compress(t_list, p_list, d_list, v_list):
-	"""
-	圧縮操作を行う
+	""" 圧縮操作を行う
 	Parameter
 		t_list	: 圧縮されていない時間のリスト
 		p_list	: 圧縮されていない(緯度, 経度)のリスト
 		d_list	: 圧縮されていない距離のリスト
 		v_list	: 圧縮されていない速度のリスト
 	return
-		zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 経度), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト
-	"""
+		zipped_list	: 各要素が (0: (start, end), 1: 重心 (緯度, 経度), 2: 総距離, 3: 平均速度, 4: 暫定的なラベル) の形のリスト """
 	print(sys._getframe().f_code.co_name, "実行中")
 	print("圧縮を開始します---")
 	zipped_list = []
@@ -123,9 +121,7 @@ def compress(t_list, p_list, d_list, v_list):
 
 
 def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
-	"""
-	休息・採食・歩行を判断する（今は速度データをもとに閾値や最近傍のアプローチだが変更する可能性あり）
-	"""
+	""" 休息・採食・歩行を判断する（今は速度データをもとに閾値や最近傍のアプローチだが変更する可能性あり）"""
 	if (velocity < r_threshold):
 		return 0 # 休息
 	elif (r_threshold <= velocity and velocity < g_threshold):
@@ -135,16 +131,14 @@ def choice_state(velocity, r_threshold = 0.0694, g_threshold = 0.181):
 
 
 def extract_one_behavior(zipped_list, state="resting"):
-	"""
-	ある行動のみを個別に取り出す
+	""" ある行動のみを個別に取り出す
 	行動時間と行動の重心（緯度・経度）を時刻順に格納したリストを返す
 	restingであれば休息のみ，walkingであれば歩行のみをそれぞれ個別に取り出す
 	Parameter
 		zipped_list		: 圧縮後のリスト (各要素の１番目が (start, end), 2番目が (緯度, 経度), 3番目が速度, 4番目にラベル)
 		state	: 休息を取り出す場合には"resting", 歩行を取り出す場合には"walking"
 	return
-		rest_list	: 休息の重心とその時間
-	"""
+		rest_list	: 休息の重心とその時間 """
 	behavior_dict = {"resting":0, "walking":1} # 行動ラベルの辞書
 	print(sys._getframe().f_code.co_name, "実行中")
 	print(state + "時間と" + state +"重心を時刻順にリストに格納します---")
@@ -159,15 +153,13 @@ def extract_one_behavior(zipped_list, state="resting"):
 
 
 def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
-	"""
-	特徴をCSVにして出力する (圧縮が既に行われている前提) 
+	""" 特徴をCSVにして出力する (圧縮が既に行われている前提) 
 	Parameter
 		filename	:ファイルのパス
 		t_list	:圧縮後の時刻のリスト
 		p_list	:圧縮後の位置情報のリスト
 		d_list	:圧縮後の距離のリスト
-		l_list	:圧縮後の暫定的なラベルのリスト
-	"""
+		l_list	:圧縮後の暫定的なラベルのリスト """
 	print(sys._getframe().f_code.co_name, "実行中")
 
 	###登録に必要な変数###
@@ -178,8 +170,8 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 
 	#####登録情報#####
 	time_index = None
-	resting_time_category = None # 時間帯のカテゴリ (12:00-19:00:0, 19:00-3:00:1, 3:00-9:00:2)
-	walking_time_category = None # 時間帯のカテゴリ (12:00-19:00:0, 19:00-3:00:1, 3:00-9:00:2)
+	resting_time_category = None # 時間帯のカテゴリ (日の出・日の入時刻を元に算出)
+	walking_time_category = None # 時間帯のカテゴリ (日の出・日の入時刻を元に算出)
 	previous_rest_length = None #圧縮にまとめられた前の休息の観測の個数
 	walking_length = None #圧縮にまとめられた歩行の観測の個数
 	moving_distance = None #休息間の距離
@@ -191,9 +183,9 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	#####登録#####
 	for i, (time, pos, dis, vel, label) in enumerate(zip(t_list, p_list, d_list, v_list, l_list)):
 		if (label == behavior_dict["walking"]): # 歩行
-			if (i != 0):
+			if (i != 0): # 最初は休息から始まるようにする (もし最初が歩行ならそのデータは削られる)
 				time_index += time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S")
-				walking_time_category = decide_time_category(time[0].hour)
+				walking_time_category = decide_time_category(time[0])
 				walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
 				max_vel = max(vel)
 				min_vel = min(vel)
@@ -205,7 +197,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			###前後関係に着目した特徴の算出###
 			after_lat = pos[0][0]
 			after_lon = pos[0][1]
-			resting_time_category = decide_time_category(time[0].hour)
+			resting_time_category = decide_time_category(time[0])
 			if (before_lat is not None and before_lon is not None):
 				moving_distance, moving_direction = geo.get_distance_and_direction(before_lat, before_lon, after_lat, after_lon, True) #前の重心との直線距離
 				
@@ -231,25 +223,40 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return
 
-def decide_time_category(hour):
-	"""
-	時間帯に応じてカテゴリ変数を作成する
-	"""
-	if (12 <= hour and hour < 19):
-		return 0
-	elif (19 <= hour or hour < 3):
-		return 1
+
+def decide_time_category(dt):
+	""" 時間帯に応じてカテゴリ変数を作成する """
+	day_flag = True
+	if (dt.hour <= 9):
+		sunrise = datetime.datetime(dt.year, dt.month, dt.day, 7, 8, 16)
+		sunset = datetime.datetime(dt.year, dt.month, dt.day, 16, 59, 38) - datetime.timedelta(days=1)
+		day_flag = False
 	else:
-		return 2
+		sunrise = datetime.datetime(dt.year, dt.month, dt.day, 7, 8, 16) + datetime.timedelta(days=1)
+		sunset = datetime.datetime(dt.year, dt.month, dt.day, 16, 59, 38)
+
+	day_length = (sunset - (sunrise - datetime.timedelta(days=1))).total_seconds()
+	night_length = (sunrise - sunset).total_seconds()
+
+	mid_day = sunset - datetime.timedelta(seconds=day_length/2)
+	mid_night = sunset + datetime.timedelta(seconds=night_length/2)
+	if (day_flag and dt < mid_day):
+		sunrise -= datetime.timedelta(days = 1)
+		return (dt - sunrise).total_seconds() / (day_length/2)
+	elif (mid_day <= dt and dt < sunset):
+		return -1 * (dt - sunset).total_seconds() / (day_length/2)
+	elif (sunset <= dt and dt < mid_night):
+		return -1 * (dt - sunset).total_seconds() / (night_length/2)
+	else:
+		return (dt - sunrise).total_seconds() / (night_length/2)
+
 
 def extract_mean(p_list, d_list, v_list):
-	"""
-	場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
+	""" 場所，距離，速さに関してリスト内のそれぞれ重心，総和，平均を求める
 	Parameter
 		p_list	: (緯度，経度) のリスト
 		d_list	: 距離のリスト
-		v_list	: 速さのリスト
-	"""
+		v_list	: 速さのリスト """
 	ave_lat_list = [] #平均を求めるための緯度のリスト
 	ave_lon_list = [] #平均を求めるための経度のリスト
 	ave_dis_list = [] #休息中の距離の総和（おそらく休息中の移動距離の総和は0）を１観測あたりに直した距離のリスト
@@ -268,9 +275,7 @@ def extract_mean(p_list, d_list, v_list):
 
 
 def calculate_rate(amount1, amount2):
-	"""
-	比を算出する
-	"""
+	""" 比を算出する """
 	if (amount2 != 0):
 		return amount1 / amount2
 	else:
@@ -278,13 +283,11 @@ def calculate_rate(amount1, amount2):
 
 
 def classify_velocity(v_list):
-	"""
-	移動速度に対して分類を行い視覚化を可能にする
+	""" 移動速度に対して分類を行い視覚化を可能にする
 	Parameter
 		v_list	:速さのリスト
 	return
-		それぞれが振り分けられたクラスタ ("red", "green", "blue")
-	"""
+		それぞれが振り分けられたクラスタ ("red", "green", "blue") """
 	data_list = []
 	for data in v_list:
 		if (choice_state(data) == 0):
@@ -296,13 +299,11 @@ def classify_velocity(v_list):
 	return data_list
 
 def output_features(filename, date:datetime, cow_id):
-	"""
-	日付と牛の個体番号からその日のその牛の位置情報を用いて特徴のファイル出力を行う
+	""" 日付と牛の個体番号からその日のその牛の位置情報を用いて特徴のファイル出力を行う
 	Parameters
 		filename	: 保存するファイルの絶対パス
 		date	: 日付	: datetime
-		cow_id	: 牛の個体番号．この牛の特徴を出力する
-	"""	
+		cow_id	: 牛の個体番号．この牛の特徴を出力する """	
 	start = date
 	end = date + datetime.timedelta(days=1)
 	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(cow_id, start, end) #2次元リスト (1日分 * 日数分)だが1日ずつの指定のため要素数は1
@@ -312,11 +313,11 @@ def output_features(filename, date:datetime, cow_id):
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		
 		# 畳み込み
-		v_list = preprocessing.convolution(v_list, 3)
-		d_list = preprocessing.convolution(d_list, 3)
-		t_list = preprocessing.elimination(t_list, 3)
-		p_list = preprocessing.elimination(p_list, 3)
-		a_list = preprocessing.elimination(a_list, 3)
+		#v_list = preprocessing.convolution(v_list, 3)
+		#d_list = preprocessing.convolution(d_list, 3)
+		#t_list = preprocessing.elimination(t_list, 3)
+		#p_list = preprocessing.elimination(p_list, 3)
+		#a_list = preprocessing.elimination(a_list, 3)
 
 		# 圧縮操作
 		zipped_list = compress(t_list, p_list, d_list, v_list) # 圧縮する

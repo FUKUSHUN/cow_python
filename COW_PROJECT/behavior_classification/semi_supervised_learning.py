@@ -111,9 +111,8 @@ def co_semi_supervised_learning(model1, model2, train_dataset, test_dataset, can
         train_dataset2 = train_dataset2.reset_index(drop=True) # インデックスを削除
         df1 = df1.reset_index(drop=True) # インデックスを削除
         df2 = df2.reset_index(drop=True) # インデックスを削除
-        #train_df = df[:int(0.01 * len(df))] # 信頼度上位1%のみを抽出
-        train_df1 = df1[df1["Probability"] >= 0.95]
-        train_df2 = df2[df2["Probability"] >= 0.95]
+        train_df1 = df1[df1["Probability"] >= 0.995]
+        train_df2 = df2[df2["Probability"] >= 0.995]
         # 既存の訓練データと新規の予測データを結合する
         train_df1 = train_df1.rename(columns={"Prediction":target_labelname}) # 予測ラベルを正解ラベルに名称変更
         train_df2 = train_df2.rename(columns={"Prediction":target_labelname}) # 予測ラベルを正解ラベルに名称変更
@@ -128,11 +127,10 @@ def co_semi_supervised_learning(model1, model2, train_dataset, test_dataset, can
         score2 = evaluate(model2, test_dataset, target_labelname)
         print(i+1, "回目: ", score1, score2)
         # 次の予測データを作成する
-        df1 = df1[df1["Probability"] < 0.95]
-        df2 = df2[df2["Probability"] < 0.95]
-        candidate_dataset1 = df1.drop(["Probability", "Prediction"], axis=1) # 新たに追加した行の削除
-        candidate_dataset2 = df2.drop(["Probability", "Prediction"], axis=1) # 新たに追加した行の削除
-        #candidate_dataset = df[int(0.01 * len(df)):] # 信頼度下位99%を抽出
+        next_df1 = df1[df1["Probability"] < 0.995]
+        next_df2 = df2[df2["Probability"] < 0.995]
+        candidate_dataset1 = next_df1.drop(["Probability", "Prediction"], axis=1) # 新たに追加した行の削除
+        candidate_dataset2 = next_df2.drop(["Probability", "Prediction"], axis=1) # 新たに追加した行の削除
         candidate_dataset1 = candidate_dataset1.reset_index(drop=True) # インデックスを削除
         candidate_dataset2 = candidate_dataset2.reset_index(drop=True) # インデックスを削除
     train_dataset2.to_csv("co_train.csv")
@@ -141,9 +139,7 @@ def co_semi_supervised_learning(model1, model2, train_dataset, test_dataset, can
 
 
 def predict_probability(model, df):
-    """
-    予測と予測確率を算出する
-    """
+    """ 予測と予測確率を算出する """
     narray = df.values
     pred = model.predict(narray)
     pred = pd.DataFrame(pred, columns=["Prediction"])
@@ -155,13 +151,11 @@ def predict_probability(model, df):
 
 
 def learn(model, train_dataset, target_labelname):
-    """
-    データから学習を行う一連の処理を実装
+    """ データから学習を行う一連の処理を実装
     Parameter
         model   : scikit-learnのモデル
         train_dataset   : 訓練用データセット    : pandas.DataFrame
-        target_labelname    : ターゲット変数の系列の列名
-    """
+        target_labelname    : ターゲット変数の系列の列名 """
     X = pd.DataFrame(train_dataset.drop(target_labelname, axis = 1))
     y = pd.DataFrame(train_dataset[target_labelname])
     X, y = X.values, np.ravel(y.values)
@@ -170,13 +164,11 @@ def learn(model, train_dataset, target_labelname):
 
 
 def evaluate(model, test_dataset, target_labelname):
-    """
-    データから評価を行う一連の処理を実装
+    """ データから評価を行う一連の処理を実装
     Parameter
         model   : scikit-learnのモデル
         test_dataset   : テスト用データセット    : pandas.DataFrame
-        target_labelname    : ターゲット変数の系列の列名
-    """
+        target_labelname    : ターゲット変数の系列の列名 """
     X = pd.DataFrame(test_dataset.drop(target_labelname, axis = 1))
     y = pd.DataFrame(test_dataset[target_labelname])
     X, y = X.values, np.ravel(y.values)
@@ -187,22 +179,22 @@ def evaluate(model, test_dataset, target_labelname):
 
 if __name__ == '__main__':
     # モデルのロード
-    rf_filename1 = 'rf/model.pickle'
+    rf_filename1 = 'bst/model3.pickle'
     rf1 = joblib.load(rf_filename1)
-    rf_filename2 = 'rf/model2.pickle'
+    rf_filename2 = 'bst/model4.pickle'
     rf2 = joblib.load(rf_filename2)
-    sv_filename1 = 'svm/model.pickle'
-    sv1 = joblib.load(sv_filename1)
-    sv_filename2 = 'svm/model2.pickle'
-    sv2 = joblib.load(sv_filename2)
+    bs_filename1 = 'bst/model.pickle'
+    bs1 = joblib.load(bs_filename1)
+    bs_filename2 = 'bst/model2.pickle'
+    bs2 = joblib.load(bs_filename2)
     
     # 訓練データのロード
     usecols = [1,2,3,4,5,6,7,9,12,13]
     names = ('RCategory','WCategory', 'RTime', 'WTime', 'AccumulatedDis', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2')
     filename = os.path.abspath('./') + "/training_data/training_data.csv"
     data_set = pd.read_csv(filename, sep = ",", header = None, usecols = usecols, names=names)
-    data_set = data_set.sample(frac=1, random_state=0).reset_index(drop=True) # データをシャッフル
-    train_dataset, test_dataset = data_set[:int(0.8 * len(data_set))], data_set[int(0.8 * len(data_set)):] # 訓練データとテストデータに分割
+    data_set = data_set.sample(frac=1).reset_index(drop=True) # データをシャッフル
+    train_dataset, test_dataset = data_set[:int(0.7 * len(data_set))], data_set[int(0.7 * len(data_set)):] # 訓練データとテストデータに分割
     train_dataset1 = train_dataset.drop("Target2", axis = 1) # 停止セグメント
     train_dataset2 = train_dataset.drop("Target1", axis = 1) # 活動セグメント
     test_dataset1 = test_dataset.drop("Target2", axis = 1) # 停止セグメント
@@ -216,10 +208,10 @@ if __name__ == '__main__':
     date = datetime.datetime(2018, 12, 20, 0, 0, 0)
     cow_id_list = get_existing_cow_list(date)
     candidate_dataset = make_features_data(dir_path, date, cow_id_list, train_usecols, train_names) # ラベルなしデータの特徴量を算出する
-    rf1 = self_semi_supervised_learning(rf1, train_dataset1, test_dataset1, candidate_dataset, "Target1", 20) # 半教師あり学習の中心的処理を行う
-    rf2 = self_semi_supervised_learning(rf2, train_dataset2, test_dataset2, candidate_dataset, "Target2", 20) # 半教師あり学習の中心的処理を行う
-    rf1, sv1 = co_semi_supervised_learning(rf1, sv1, train_dataset1, test_dataset1, candidate_dataset, "Target1", 20) # 半教師あり学習の中心的処理を行う
-    rf2, sv2 = co_semi_supervised_learning(rf2, sv2, train_dataset2, test_dataset2, candidate_dataset, "Target2", 20) # 半教師あり学習の中心的処理を行う
+    #rf1 = self_semi_supervised_learning(rf1, train_dataset1, test_dataset1, candidate_dataset, "Target1", 20) # 半教師あり学習の中心的処理を行う
+    #rf2 = self_semi_supervised_learning(rf2, train_dataset2, test_dataset2, candidate_dataset, "Target2", 20) # 半教師あり学習の中心的処理を行う
+    rf1, bs1 = co_semi_supervised_learning(rf1, bs1, train_dataset1, test_dataset1, candidate_dataset, "Target1", 20) # 半教師あり学習の中心的処理を行う
+    rf2, bs2 = co_semi_supervised_learning(rf2, bs2, train_dataset2, test_dataset2, candidate_dataset, "Target2", 20) # 半教師あり学習の中心的処理を行う
 
     # --- テストデータで精度の確認 ---
     print(evaluate(rf1, test_dataset1, "Target1"))
