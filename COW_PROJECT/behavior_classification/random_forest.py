@@ -38,17 +38,16 @@ if __name__ == '__main__':
     print(evaluation2)
 
     # モデルを保存する
-    filename1 = 'rf/model3.pickle'
+    filename1 = 'rf/model.pickle'
     pickle.dump(model1, open(filename1, 'wb'))
-    filename2 = 'rf/model4.pickle'
+    filename2 = 'rf/model2.pickle'
     pickle.dump(model2, open(filename2, 'wb'))
 
-    
-    # 生成された木の1個目を可視化
     """
+    # 生成された木の1個目を可視化
     for i in range(len(model1.estimators_)):
         estimator1 = model1.estimators_[i]
-        estimator2 = model1.estimators_[i]
+        estimator2 = model2.estimators_[i]
         filename1 = "rf/tree1_" + str(i) + ".png"
         filename2 = "rf/tree2_" + str(i) + ".png"
         dot_data1 = tree.export_graphviz(
@@ -73,4 +72,4 @@ if __name__ == '__main__':
         graph.write_png(filename1)
         graph = pdp.graph_from_dot_data(dot_data2)
         graph.write_png(filename2)
-    """
+        """
