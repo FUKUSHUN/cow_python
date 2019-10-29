@@ -29,13 +29,16 @@ import image.adjectory_image as disp
 
 if __name__ == '__main__':
     filename = "behavior_classification/training_data/features.csv"
-    start = datetime.datetime(2018, 5, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 5, 31, 0, 0, 0)
+    start = datetime.datetime(2018, 12, 20, 0, 0, 0)
+    end = datetime.datetime(2018, 12, 31, 23, 59, 59)
+    date_list = []
     sum_rest_list = []
     print(os.getcwd())
     time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
-    if (len(position_list[0]) != 0):
-        for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
+    for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
+        start += datetime.timedelta(days=1)
+        date_list.append(start.strftime("%Y-%m-%d"))
+        if (len(p_list) != 0):
             # ---前処理---
             t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
             
@@ -73,10 +76,15 @@ if __name__ == '__main__':
             print(result1)
             print(result2)	
             for a, b, c, d in zip(result1, result2, prob1, prob2):
-                if (c.max() >= 0.7 and a == 0):
+                if (c[0] >= 0.7):
                     labels.append(a)
                 else:
-                    labels.append(1)
+                    labels.append(0)
+                if (d[0] >= 0.7):
+                    labels.append(b)
+                else:
+                    labels.append(0)
+
 
             # --- 復元 ---
             zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
@@ -86,4 +94,11 @@ if __name__ == '__main__':
                 if (i == 0):
                     sum_rest += 5
             sum_rest_list.append(sum_rest)
+        else:
+            sum_rest_list.append(0)
+    
+    pd.DataFrame(date_list).to_csv("date.csv")    
+    pd.DataFrame(sum_rest_list).to_csv("testa.csv")
+
+
             
