@@ -180,12 +180,13 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	print("特徴を計算します---")
 	feature_list =[]
 	behavior_dict = {"resting":0, "walking":1} # 行動ラベルの辞書
+	initial_datetime = t_list[0][0]
 	#####登録#####
 	for i, (time, pos, dis, vel, label) in enumerate(zip(t_list, p_list, d_list, v_list, l_list)):
 		if (label == behavior_dict["walking"]): # 歩行
 			if (i != 0): # 最初は休息から始まるようにする (もし最初が歩行ならそのデータは削られる)
 				time_index += time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S")
-				walking_time_category = decide_time_category(time[0])
+				walking_time_category = decide_time_category(time[0], initial_datetime)
 				walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
 				max_vel = max(vel)
 				min_vel = min(vel)
@@ -197,7 +198,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			###前後関係に着目した特徴の算出###
 			after_lat = pos[0][0]
 			after_lon = pos[0][1]
-			resting_time_category = decide_time_category(time[0])
+			resting_time_category = decide_time_category(time[0], initial_datetime)
 			if (before_lat is not None and before_lon is not None):
 				moving_distance, moving_direction = geo.get_distance_and_direction(before_lat, before_lon, after_lat, after_lon, True) #前の重心との直線距離
 				
@@ -224,31 +225,18 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	return
 
 
-def decide_time_category(dt):
+def decide_time_category(dt, date):
 	""" 時間帯に応じてカテゴリ変数を作成する """
-	day_flag = True
-	if (dt.hour <= 9):
-		sunrise = datetime.datetime(dt.year, dt.month, dt.day, 7, 8, 16)
-		sunset = datetime.datetime(dt.year, dt.month, dt.day, 16, 59, 38) - datetime.timedelta(days=1)
-		day_flag = False
-	else:
-		sunrise = datetime.datetime(dt.year, dt.month, dt.day, 7, 8, 16) + datetime.timedelta(days=1)
-		sunset = datetime.datetime(dt.year, dt.month, dt.day, 16, 59, 38)
-
-	day_length = (sunset - (sunrise - datetime.timedelta(days=1))).total_seconds()
-	night_length = (sunrise - sunset).total_seconds()
-
-	mid_day = sunset - datetime.timedelta(seconds=day_length/2)
-	mid_night = sunset + datetime.timedelta(seconds=night_length/2)
-	if (day_flag and dt < mid_day):
+	sunrise = datetime.datetime(date.year, date.month, date.day, 7, 8, 16)
+	sunset = datetime.datetime(date.year, date.month, date.day, 16, 59, 38)
+	if (sunrise + datetime.timedelta(days = 1) <= dt):
+		sunrise += datetime.timedelta(days = 1)
+		sunset += datetime.timedelta(days = 1)
+	elif (dt < sunrise):
 		sunrise -= datetime.timedelta(days = 1)
-		return (dt - sunrise).total_seconds() / (day_length/2)
-	elif (mid_day <= dt and dt < sunset):
-		return -1 * (dt - sunset).total_seconds() / (day_length/2)
-	elif (sunset <= dt and dt < mid_night):
-		return -1 * (dt - sunset).total_seconds() / (night_length/2)
-	else:
-		return (dt - sunrise).total_seconds() / (night_length/2)
+		sunset -= datetime.timedelta(days = 1)
+	day_length = (sunset - sunrise).total_seconds()
+	return (sunset - dt).total_seconds() / day_length
 
 
 def extract_mean(p_list, d_list, v_list):
