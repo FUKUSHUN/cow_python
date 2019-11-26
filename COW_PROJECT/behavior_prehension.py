@@ -29,8 +29,8 @@ import image.adjectory_image as disp
 
 if __name__ == '__main__':
 	filename = "behavior_classification/training_data/features.csv"
-	start = datetime.datetime(2018, 12, 20, 0, 0, 0)
-	end = datetime.datetime(2018, 12, 21, 0, 0, 0)
+	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
+	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
 	print(os.getcwd())
 	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
 	if (len(position_list[0]) != 0):
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 			#plotting.line_plot(t_list, v_list)
 			c_list = output_features.classify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
 			plotting.scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
-			plotting.scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
+			#plotting.scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
 
 			# 圧縮操作
 			zipped_list = output_features.compress(t_list, p_list, d_list, v_list) # 圧縮する
@@ -63,7 +63,6 @@ if __name__ == '__main__':
 			
 			# 各特徴
 			df = pd.read_csv(filename, sep = ",", header = 0, usecols = [0,1,2,3,4,5,6,7,9], names=('Time', 'RCategory', 'WCategory', 'RTime', 'WTime', 'AccumulatedDis', 'Velocity', 'MVelocity', 'Distance')) # csv読み込み
-			print(df['AccumulatedDis'])
 			plotting.show_3d_plot(sp.stats.zscore(df['RTime']), sp.stats.zscore(df['WTime']), sp.stats.zscore(df['AccumulatedDis'])) # 3次元プロット
 			x, y = analyzing.reduce_dim_from3_to2(sp.stats.zscore(df['RTime']), sp.stats.zscore(df['WTime']), sp.stats.zscore(df['AccumulatedDis'])) # 主成分分析 (3 → 2)
 			plotting.time_scatter(df['Time'].tolist(), x, y) # 時系列プロット

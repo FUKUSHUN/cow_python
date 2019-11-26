@@ -212,17 +212,20 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			time_index = time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S") + " | "
 				
 	print("---特徴を計算しました")
-
-	print(filename + "に出力します---")
-	#####出力#####
-	with open(filename, "w", newline="") as f:
-		writer = csv.writer(f)
-		writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction"))
-		for feature in feature_list:
-			writer.writerow(feature)
-	print("---" + filename + "に出力しました")
-	print(sys._getframe().f_code.co_name, "正常終了\n")
-	return
+	### ファイル名の指定がない時はファイル出力せずにリストを返却 ###
+	if (filename == ""):
+		return feature_list
+	else:
+		print(filename + "に出力します---")
+		#####出力#####
+		with open(filename, "w", newline="") as f:
+			writer = csv.writer(f)
+			writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction"))
+			for feature in feature_list:
+				writer.writerow(feature)
+		print("---" + filename + "に出力しました")
+		print(sys._getframe().f_code.co_name, "正常終了\n")
+		return
 
 
 def decide_time_category(dt, date):
@@ -301,11 +304,11 @@ def output_features(filename, date:datetime, cow_id):
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 		
 		# 畳み込み
-		#v_list = preprocessing.convolution(v_list, 3)
-		#d_list = preprocessing.convolution(d_list, 3)
-		#t_list = preprocessing.elimination(t_list, 3)
-		#p_list = preprocessing.elimination(p_list, 3)
-		#a_list = preprocessing.elimination(a_list, 3)
+		v_list = preprocessing.convolution(v_list, 3)
+		d_list = preprocessing.convolution(d_list, 3)
+		t_list = preprocessing.elimination(t_list, 3)
+		p_list = preprocessing.elimination(p_list, 3)
+		a_list = preprocessing.elimination(a_list, 3)
 
 		# 圧縮操作
 		zipped_list = compress(t_list, p_list, d_list, v_list) # 圧縮する

@@ -109,3 +109,16 @@ def select_used_time(time_list, position_list, distance_list, velocity_list, ang
     print("The length of time_list: ", len(new_time_list), "\n")
     return new_time_list, new_position_list, new_distance_list, new_velocity_list, new_angle_list
 
+
+def make_time_list(date):
+    """ t_listを作成する """
+    time_list = []
+    time = date
+    end = date + datetime.timedelta(days=1)
+    while(time < end):
+        t = time + datetime.timedelta(hours = 9)
+        if(t.hour < 9 or 11 < t.hour):
+            time_list.append(t)
+        time += datetime.timedelta(seconds=5)
+    print("---12:00 pm - 9:00 amのデータの抽出が終了しました")
+    return time_list

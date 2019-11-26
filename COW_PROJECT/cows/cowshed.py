@@ -66,3 +66,11 @@ class Cowshed:
 		del cow_id_list
 		del gps_data_list
 		return df
+
+
+	def modify_time_gap(self):
+		""" 全ての牛の時差を補正する """
+		print("時差を補正します---")
+		for cow in self.cow_list:
+			cow.modify_time_gap()
+		print("---時差を補正しました")

@@ -45,7 +45,7 @@ def main(start, end, dic):
         data_list = []
         while(a < dt and a < end):
             print(a.strftime("%Y/%m/%d %H:%M:%S"))
-            df = cows.get_cow_list(a, a + datetime.timedelta(minutes = 60))
+            df = cows.get_cow_list(a, a + datetime.timedelta(minutes = 10))
             a = a + datetime.timedelta(minutes = 10)
             nodes_list = comm.extract_community(df, 10) #コミュニティ生成
             v_array = np.zeros((len(dic.values()))) #各評価値を行ベクトルの形式で保存するので全ての要素0で初期化

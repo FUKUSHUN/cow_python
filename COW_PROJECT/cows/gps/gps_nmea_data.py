@@ -22,3 +22,7 @@ class GpsNmeaData:
 			
 	def get_datetime(self):
 		return self.dt #datetime型
+
+	
+	def set_datetime(self, dt):
+		self.dt = dt # datetime型（時差を直したい時など）

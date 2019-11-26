@@ -1,0 +1,189 @@
+' 16番目の列に正解不正解の判定を行う列を追加する
+Function Judge_answer()
+     ' 1番目のシートをオブジェクトとして開く
+    Dim sheet1 As Worksheet
+    Set sheet1 = Worksheets(1)
+    
+    Dim i, j As Integer
+    i = 2 ' 行数をカウントアップするための変数．１行目は飛ばす
+    j = 16 ' 16行目に書き込む
+    
+    ' １行ずつ読んでいき予測が正解した場合のデータを収集する
+    sheet1.Cells(1, j) = "Judge"
+    Do While sheet1.Cells(i, 1) <> ""  ' 空白になるまで繰り返す
+        If sheet1.Cells(i, 10).Value = sheet1.Cells(i, 11).Value Then  '予測と正解が合っていれば1
+            sheet1.Cells(i, j).Value = 1
+        Else ' そうでなければ0
+            sheet1.Cells(i, j).Value = 0
+        End If
+        i = i + 1
+    Loop
+    ' 信頼度の降順に並び替える
+    Dim c1, c2, c3 As Range
+    Set c1 = sheet1.Cells(2, 1) ' 始まり
+    Set c2 = sheet1.Cells(i, 16) ' 終わり
+    Set c3 = sheet1.Cells(1, 15) ' ソートする列
+    sheet1.Range(c1, c2).Sort Key1:=c3, order1:=xlDescending
+   MsgBox ("正解判定列を追加しました")
+End Function
+
+' 新しいシートに個別の正解データのみのデータを振り分ける
+Function Collect_one_behavior(sheetname As String, behavior_num As Integer)
+    ' ワークシートの追加
+    Worksheets.Add(After:=Worksheets(Worksheets.Count)).Name = sheetname
+    
+    Dim sheet1, Sheet2 As Worksheet
+    Set sheet1 = Worksheets(1) ' 1番目のシートをオブジェクトとして開く
+    Set Sheet2 = Worksheets(sheetname) ' 書き込みシートのオブジェクト
+    
+    Dim i, j As Integer
+    i = 2 ' 行数をカウントアップするための変数．１行目は飛ばす
+    j = 10 ' 正解データの列
+    i2 = i ' 書き出し用カウントアップ変数
+    
+    ' １行ずつ読んでいき正解データがsheetnameのものだけを収集する
+    sheet1.Rows(1).Copy
+    Sheet2.Rows(1).PasteSpecial (xlPasteAll)
+    Do While sheet1.Cells(i, 1) <> ""  ' 空白になるまで繰り返す
+        If sheet1.Cells(i, j).Value = behavior_num Then  '正解がsheetnameならば
+            sheet1.Rows(i).Copy
+            Sheet2.Rows(i2).PasteSpecial (xlPasteAll)
+            i2 = i2 + 1
+        End If
+        i = i + 1
+    Loop
+    ' 信頼度の降順に並び替える
+    Dim c1, c2, c3 As Range
+    Set c1 = Sheet2.Cells(2, 1) ' 始まり
+    Set c2 = Sheet2.Cells(i2, 16) ' 終わり
+    Set c3 = Sheet2.Cells(1, 15) ' ソートする列
+    Sheet2.Range(c1, c2).Sort Key1:=c3, order1:=xlDescending
+    MsgBox (sheetname + "シートを追加しました")
+End Function
+
+' 正解と不正解の個数をカウントする
+Function count_correct_answer(sheetname As String) As Integer()
+    Dim sheet1 As Worksheet
+    Set sheet1 = Worksheets(sheetname) ' 指定したワークシートをオブジェクト化
+    
+    Dim i, j, count1, count2 As Integer
+    i = 2 ' 行数をカウントアップするための変数．１行目は飛ばす
+    j = 16 ' 正解判定の列
+    count1 = 0 ' 正解のカウントアップ変数
+    count2 = 0 ' 不正解のカウントアップ変数
+    
+    ' １行ずつ読んでいき正解判定が正のものの数をカウントする
+    Do While sheet1.Cells(i, 1) <> ""  ' 空白になるまで繰り返す
+        If sheet1.Cells(i, j).Value = 1 Then  '正解ならば
+            count1 = count1 + 1
+        Else ' 不正解ならば
+            count2 = count2 + 1
+        End If
+        i = i + 1
+    Loop
+    Dim ret(3) As Integer
+    ret(0) = i - 2 ' 全数
+    ret(1) = count1 ' 正解数
+    ret(2) = count2 ' 不正解数
+    count_correct_answer = ret()
+End Function
+
+'各行動の正答率を算出する
+Function calculate_accuracy(rest_score() As Integer, grazing_score() As Integer, walk_score() As Integer)
+    ' ワークシートの追加
+    Worksheets.Add(After:=Worksheets(Worksheets.Count)).Name = "Accuracy"
+    
+    Cells(1, 2) = "REST"
+    Cells(1, 3) = "GRAZING"
+    Cells(1, 4) = "WALK"
+    Cells(1, 5) = "SUM"
+    Cells(2, 1) = "ALL"
+    Cells(3, 1) = "CORRECT ans"
+    Cells(4, 1) = "Wrong ans"
+    Cells(5, 1) = "Accuracy"
+    Dim i As Integer
+    i = 0
+    For i = 0 To 3
+        Cells(i + 2, 2) = rest_score(i)
+        If i = 3 Then
+            Cells(i + 2, 2) = rest_score(1) / rest_score(0)
+        End If
+    Next
+    For i = 0 To 3
+        Cells(i + 2, 3) = grazing_score(i)
+        If i = 3 Then
+            Cells(i + 2, 3) = grazing_score(1) / grazing_score(0)
+        End If
+    Next
+    For i = 0 To 3
+        Cells(i + 2, 4) = walk_score(i)
+        If i = 3 Then
+            Cells(i + 2, 4) = walk_score(1) / walk_score(0)
+        End If
+    Next
+    Cells(2, 5) = rest_score(0) + grazing_score(0) + walk_score(0)
+    Cells(3, 5) = rest_score(1) + grazing_score(1) + walk_score(1)
+    Cells(4, 5) = rest_score(2) + grazing_score(2) + walk_score(2)
+    Cells(5, 5) = Cells(3, 5) / Cells(2, 5)
+End Function
+
+' 信頼度と成績からROCっぽいものを作成する
+Function lookup_confidence(sheetname As String, behavior_score() As Integer)
+    Dim sheet1 As Worksheet
+    Set sheet1 = Worksheets(sheetname) ' 指定したワークシートをオブジェクト化
+    
+    Dim i, column, count1, count2 As Integer
+    i = 2 ' 行数をカウントアップするための変数．１行目は飛ばす
+    column = 17 ' 書き込みの列
+    count1 = 0 ' 正解のカウントアップ変数
+    count2 = 0 ' 不正解のカウントアップ変数
+    
+    ' １行ずつ読んでいき正解判定が正のものの数をカウントする
+    sheet1.Cells(1, column) = "Negative rate"
+    sheet1.Cells(1, column + 1) = "Positive rate"
+    Do While sheet1.Cells(i, 1) <> ""  ' 空白になるまで繰り返す
+        If sheet1.Cells(i, 16).Value = 1 Then  '正解ならば
+            count1 = count1 + 1
+            sheet1.Cells(i, column + 1) = count1 / behavior_score(1)
+            sheet1.Cells(i, column) = count2 / behavior_score(2)
+        Else ' 不正解ならば
+            count2 = count2 + 1
+            sheet1.Cells(i, column + 1) = count1 / behavior_score(1)
+            sheet1.Cells(i, column) = count2 / behavior_score(2)
+        End If
+        i = i + 1
+    Loop
+    
+    ' グラフの作成
+    With sheet1.Shapes.AddChart.Chart
+
+        .ChartType = xlXYScatterSmooth
+        .SetSourceData Range(sheet1.Cells(1, column), sheet1.Cells(i - 1, column + 1))
+        .HasTitle = True
+        .ChartTitle.Text = "ROC"
+        .HasLegend = False
+        .Axes(xlValue).MaximumScale = 1#
+        .Axes(xlValue).MinimumScale = 0#
+        .Axes(xlCategory).MaximumScale = 1#
+        .Axes(xlCategory).MinimumScale = 0#
+    End With
+End Function
+Sub All_process()
+    Call Judge_answer
+    Call Collect_one_behavior("REST", 0)
+    Call Collect_one_behavior("GRAZING", 1)
+    Call Collect_one_behavior("WALK", 2)
+    Dim behavior() As Integer
+    behavior = count_correct_answer("validation_a")
+    Dim rest() As Integer
+    rest = count_correct_answer("REST")
+    Dim grazing() As Integer
+    grazing = count_correct_answer("GRAZING")
+    Dim walk() As Integer
+    walk = count_correct_answer("WALK")
+    Call lookup_confidence("REST", rest)
+    Call lookup_confidence("GRAZING", grazing)
+    Call lookup_confidence("WALK", walk)
+    Call lookup_confidence("validation_a", behavior)
+    Call calculate_accuracy(rest, grazing, walk)
+End Sub

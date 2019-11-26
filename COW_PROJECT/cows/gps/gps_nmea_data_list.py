@@ -122,4 +122,11 @@ class GpsNmeaDataList:
 		m = dt.month
 		d = dt.day
 		return str(y * 10000 + m * 100 + d)
+
+	
+	def modify_time_gap(self):
+		""" 時差を修正してデータを再登録する（自明的に行えるように関数化する） """
+		for g in self.gps_list:
+			time = g.get_datetime()
+			g.set_datetime(time + datetime.timedelta(hours=9))
 		

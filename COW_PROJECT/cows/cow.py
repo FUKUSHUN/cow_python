@@ -19,6 +19,9 @@ class Cow:
 	def get_gps_list(self, start:datetime, end:datetime):
 		list = self.gps_list.get_sub_list(start, end)
 		return list
+
+	def modify_time_gap(self):
+		self.gps_list.modify_time_gap()
 		
 	#テスト用 (gps_listを返す)
 	def get_test_list(self):
