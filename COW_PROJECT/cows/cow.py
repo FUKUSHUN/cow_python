@@ -21,6 +21,7 @@ class Cow:
 		return list
 
 	def modify_time_gap(self):
+		""" 時差補正 """
 		self.gps_list.modify_time_gap()
 		
 	#テスト用 (gps_listを返す)
