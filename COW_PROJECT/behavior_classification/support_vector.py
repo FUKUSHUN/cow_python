@@ -7,7 +7,7 @@ from sklearn.multiclass import OneVsRestClassifier # 1対多分類サポート�
 from sklearn.metrics import (roc_curve, auc, accuracy_score)
 
 # 自作モジュール
-import evaluation_of_classifier as evaluation
+import functions.evaluation_of_classifier as evaluation
 
 
 if __name__ == '__main__':

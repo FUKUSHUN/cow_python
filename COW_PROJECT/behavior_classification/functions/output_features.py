@@ -15,13 +15,13 @@ import pickle
 added_path = os.path.abspath('../')
 sys.path.append(added_path)
 import cows.geography as geo
-import behavior_classification.hmm as hmm
-import behavior_classification.loading as loading
-import behavior_classification.preprocessing as preprocessing
-import behavior_classification.plotting as plotting
-import behavior_classification.analyzing as analyzing
-import behavior_classification.regex as regex
-import behavior_classification.postprocessing as postprocessing
+import behavior_classification.functions.hmm as hmm
+import behavior_classification.functions.loading as loading
+import behavior_classification.functions.preprocessing as preprocessing
+import behavior_classification.functions.plotting as plotting
+import behavior_classification.functions.analyzing as analyzing
+import behavior_classification.functions.regex as regex
+import behavior_classification.functions.postprocessing as postprocessing
 import image.adjectory_image as disp
 
 """
@@ -299,16 +299,16 @@ def output_features(filename, date:datetime, cow_id):
 	end = date + datetime.timedelta(days=1)
 	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(cow_id, start, end) #2次元リスト (1日分 * 日数分)だが1日ずつの指定のため要素数は1
 	t_list, p_list, d_list, v_list, a_list = time_list[0], position_list[0], distance_list[0], velocity_list[0], angle_list[0]
-	if (len(p_list) != 0): # データがない場合は飛ばす
-		# ---前処理---
-		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+	# ---前処理---
+	t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+	if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0): # データがない場合は飛ばす
 		
 		# 畳み込み
-		v_list = preprocessing.convolution(v_list, 3)
-		d_list = preprocessing.convolution(d_list, 3)
-		t_list = preprocessing.elimination(t_list, 3)
-		p_list = preprocessing.elimination(p_list, 3)
-		a_list = preprocessing.elimination(a_list, 3)
+		#v_list = preprocessing.convolution(v_list, 3)
+		#d_list = preprocessing.convolution(d_list, 3)
+		#t_list = preprocessing.elimination(t_list, 3)
+		#p_list = preprocessing.elimination(p_list, 3)
+		#a_list = preprocessing.elimination(a_list, 3)
 
 		# 圧縮操作
 		zipped_list = compress(t_list, p_list, d_list, v_list) # 圧縮する

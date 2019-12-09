@@ -16,15 +16,15 @@ import pickle
 import cows.geography as geo
 import cows.cowshed as Cowshed
 import cows.cows_community as comm
-import behavior_classification.loading as loading
-import behavior_classification.preprocessing as preprocessing
-import behavior_classification.plotting as plotting
-import behavior_classification.analyzing as analyzing
-import behavior_classification.regex as regex
-import behavior_classification.postprocessing as postprocessing
-import behavior_classification.output_features as output_features
-import behavior_synchronization.synchronization_method as synchmethod
-import behavior_synchronization.dtw as dtw
+import behavior_classification.functions.loading as loading
+import behavior_classification.functions.preprocessing as preprocessing
+import behavior_classification.functions.plotting as plotting
+import behavior_classification.functions.analyzing as analyzing
+import behavior_classification.functions.regex as regex
+import behavior_classification.functions.postprocessing as postprocessing
+import behavior_classification.functions.output_features as output_features
+import behavior_synchronization.functions.synchronization_method as synchmethod
+import behavior_synchronization.functions.dtw as dtw
 
 # 別ファイルでモジュール化
 def get_existing_cow_list(date:datetime, filepath):
@@ -93,14 +93,14 @@ if __name__ == '__main__':
     model_filename1 = "behavior_classification/bst/model.pickle"
     model_filename2 = "behavior_classification/bst/model2.pickle"
     # --- 分析を行う期間（この期間中1日ずつ分析を行う） ---
-    start = datetime.datetime(2018, 12, 30, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
-    end = datetime.datetime(2018, 12, 31, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
+    start = datetime.datetime(2018, 10, 15, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
+    end = datetime.datetime(2018, 10, 25, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
     # --- コミュニティ生成間隔 [minutes] ---
     community_interval = 5
     print(os.getcwd())
 
     ### 1日ずつ検証 ###
-    record_list = []
+    record_list = [] # 結果格納用リスト
     the_day = start
     while (the_day < end):
         data_list = pd.DataFrame([])
@@ -130,7 +130,7 @@ if __name__ == '__main__':
                     cow_id = position_df.iloc[0,i]
                     com = [] # その牛のコミュニティメンバー（自分を含む）
                     com_data = [] # その牛のコミュニティメンバーの行動データ（自分を含む）
-                    if (cow_id == 20158):
+                    if (cow_id == 20299):
                         for team in nodes_list:
                             if(cow_id in team):
                                 com = team
@@ -150,15 +150,14 @@ if __name__ == '__main__':
                                 f = dtw.dtw(main_cow_behavior, behavior)
                                 score = dtw.get_dtw_sim(f, main_cow_behavior, behavior)
                                 scores.append(score)
-                        average_score = sum(scores) / len(scores) if (len(scores) != 0) else  0
-                        all_elem = [dt.strftime("%H:%M")]
+                        average_score = sum(scores) / len(scores) if (len(scores) != 0) else np.nan
+                        all_elem = [dt.strftime("%m/%d %H:%M")]
                         all_elem.append(len(com))
                         all_elem.extend(behavior_vector)
                         all_elem.append(average_score)
                         record_list.append(all_elem)
                         print(all_elem)
                         
-                
                 """
                 plt.figure()
                 for column_name, behavior in behavior_df.iteritems():
@@ -166,11 +165,14 @@ if __name__ == '__main__':
                 plt.show()
                 sys.exit()
                 """
+            else:
+                all_elem = [dt.strftime("%m/%d %H:%M")]
+                record_list.append(all_elem)
             time_list.append(dt)
             dt += datetime.timedelta(minutes=community_interval) # 5分進める
 
         the_day += datetime.timedelta(days=1) # 1日進める
-    with open("behavior_synchronization/20158.csv", "w") as f:
+    with open("behavior_synchronization/20158.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["Time", "Community size", "Prob_rest", "Prob_graze", "Prob_walk", "DTW_score"])
         for row in record_list:

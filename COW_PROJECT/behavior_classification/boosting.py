@@ -10,7 +10,7 @@ from sklearn import tree # 可視化用
 import pydotplus as pdp # 可視化用
 
 # 自作モジュール
-import evaluation_of_classifier as evaluation
+import functions.evaluation_of_classifier as evaluation
 
 
 if __name__ == '__main__':

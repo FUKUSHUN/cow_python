@@ -13,24 +13,22 @@ import pickle
 
 # 自作クラス
 import cows.geography as geo
-import behavior_classification.hmm as hmm
-import behavior_classification.loading as loading
-import behavior_classification.preprocessing as preprocessing
-import behavior_classification.plotting as plotting
-import behavior_classification.analyzing as analyzing
-import behavior_classification.regex as regex
-import behavior_classification.postprocessing as postprocessing
-import behavior_classification.output_features as output_features
+import behavior_classification.functions.hmm as hmm
+import behavior_classification.functions.loading as loading
+import behavior_classification.functions.preprocessing as preprocessing
+import behavior_classification.functions.plotting as plotting
+import behavior_classification.functions.analyzing as analyzing
+import behavior_classification.functions.regex as regex
+import behavior_classification.functions.postprocessing as postprocessing
+import behavior_classification.functions.output_features as output_features
 import image.adjectory_image as disp
 
-"""
-基本的な手順はoutput_features.output_features()に集約されているが，個々のグラフなどの可視化にはこちらのメインを活用
-"""
+""" 基本的な手順はoutput_features.output_features()に集約されているが，個々のグラフなどの可視化にはこちらのメインを活用 """
 
 if __name__ == '__main__':
 	filename = "behavior_classification/training_data/features.csv"
-	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
-	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
+	start = datetime.datetime(2018, 12, 20, 0, 0, 0)
+	end = datetime.datetime(2018, 12, 21, 0, 0, 0)
 	print(os.getcwd())
 	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
 	if (len(position_list[0]) != 0):
@@ -39,11 +37,11 @@ if __name__ == '__main__':
 			t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
 			
 			# 畳み込み
-			v_list = preprocessing.convolution(v_list, 3)
-			d_list = preprocessing.convolution(d_list, 3)
-			t_list = preprocessing.elimination(t_list, 3)
-			p_list = preprocessing.elimination(p_list, 3)
-			a_list = preprocessing.elimination(a_list, 3)
+			#v_list = preprocessing.convolution(v_list, 3)
+			#d_list = preprocessing.convolution(d_list, 3)
+			#t_list = preprocessing.elimination(t_list, 3)
+			#p_list = preprocessing.elimination(p_list, 3)
+			#a_list = preprocessing.elimination(a_list, 3)
 
 			# 時系列描画
 			#plotting.line_plot(t_list, v_list)
