@@ -167,6 +167,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 	before_lon = None
 	after_lat = None
 	after_lon = None
+	rest_vel = None
 
 	#####登録情報#####
 	time_index = None
@@ -188,6 +189,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 				time_index += time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S")
 				walking_time_category = decide_time_category(time[0], initial_datetime)
 				walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
+				vel.extend(rest_vel) # 休息時の速度のリストと結合
 				max_vel = max(vel)
 				min_vel = min(vel)
 				
@@ -199,7 +201,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			after_lat = pos[0][0]
 			after_lon = pos[0][1]
 			resting_time_category = decide_time_category(time[0], initial_datetime)
-			if (before_lat is not None and before_lon is not None):
+			if (before_lat is not None and before_lon is not None and rest_vel is not None):
 				moving_distance, moving_direction = geo.get_distance_and_direction(before_lat, before_lon, after_lat, after_lon, True) #前の重心との直線距離
 				
 				###リストに追加###
@@ -209,6 +211,7 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 			previous_rest_length = (time[1] - time[0]).total_seconds() / 5 + 1
 			before_lat = pos[len(pos) - 1][0]
 			before_lon = pos[len(pos) - 1][1]
+			rest_vel = vel
 			time_index = time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S") + " | "
 				
 	print("---特徴を計算しました")
@@ -217,12 +220,20 @@ def output_feature_info(filename, t_list, p_list, d_list, v_list, l_list):
 		return feature_list
 	else:
 		print(filename + "に出力します---")
-		#####出力#####
-		with open(filename, "w", newline="") as f:
-			writer = csv.writer(f)
-			writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction"))
-			for feature in feature_list:
-				writer.writerow(feature)
+		if (os.path.exists(filename)): # ファイルがすでに存在しているとき
+			#####出力#####
+			with open(filename, "w", newline="") as f:
+				writer = csv.writer(f)
+				writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction"))
+				for feature in feature_list:
+					writer.writerow(feature)
+		else:  # ファイルが存在していないとき
+			#####出力#####
+			with open(filename, "a", newline="") as f:
+				writer = csv.writer(f)
+				writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Distance", "Direction"))
+				for feature in feature_list:
+					writer.writerow(feature)
 		print("---" + filename + "に出力しました")
 		print(sys._getframe().f_code.co_name, "正常終了\n")
 		return
@@ -250,18 +261,14 @@ def extract_mean(p_list, d_list, v_list):
 		v_list	: 速さのリスト """
 	ave_lat_list = [] #平均を求めるための緯度のリスト
 	ave_lon_list = [] #平均を求めるための経度のリスト
-	ave_dis_list = [] #休息中の距離の総和（おそらく休息中の移動距離の総和は0）を１観測あたりに直した距離のリスト
-	ave_vel_list = [] #休息中の速さの平均を求めるための速さのリスト
-	for place, distance, velocity in zip(p_list, d_list, v_list):
+	for place in p_list:
 		ave_lat_list.append(place[0])
 		ave_lon_list.append(place[1])
-		ave_dis_list.append(distance)
-		ave_vel_list.append(velocity)
 	
 	lat = sum(ave_lat_list) / len(ave_lat_list)
 	lon = sum(ave_lon_list) / len(ave_lon_list)
-	dis = sum(ave_dis_list) / len(ave_dis_list)
-	vel = sum(ave_vel_list) / len(ave_vel_list)
+	dis = sum(d_list) / len(d_list)
+	vel = sum(v_list) / len(v_list)
 	return (lat,lon), dis, vel
 
 

@@ -11,7 +11,7 @@ import matplotlib.dates as mdates
 from sklearn.externals import joblib
 import pickle
 
-# 自作クラス
+# 自作メソッド
 import cows.geography as geo
 import behavior_classification.functions.hmm as hmm
 import behavior_classification.functions.loading as loading

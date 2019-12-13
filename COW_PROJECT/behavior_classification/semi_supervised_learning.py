@@ -14,7 +14,7 @@ from sklearn.model_selection import StratifiedKFold # 交差検証用
 from sklearn.model_selection import cross_val_score # 交差検証用
 
 # 自作クラス
-import functions.output_features
+import functions.output_features as output_features
 
 def get_existing_cow_list(date:datetime):
     """
