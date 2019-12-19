@@ -35,14 +35,14 @@ Parameter
     c_list  : 色分けのリスト
 """
 def scatter_plot(t_list, v_list, c_list):
-	x_list = []
-	for i in range(len(t_list)):
-		x_list.append(i)
-	x = np.array(x_list)
-	y = np.array(v_list)
-	c = np.array(c_list)
-	plt.scatter(x, y, c = c, s = 1)
-	plt.show()
+    color_table = ['blue','green','red','yellow','pink']
+    x_list = [i for i in range(len(t_list))]
+    color_list = [color_table[c] for c in c_list]
+    x = np.array(x_list)
+    y = np.array(v_list)
+    c = np.array(color_list)
+    plt.scatter(x, y, c = c, s = 1)
+    plt.show()
 
 """
 3次元散布図を作成する

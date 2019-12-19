@@ -30,9 +30,9 @@ if __name__ == '__main__':
 	# --- 変数定義 ---
 	filename = "behavior_classification/training_data/features.csv"
 	rest_dataset_file = "behavior_classification/training_data/rest_train_data.csv"
-	start = datetime.datetime(2019, 3, 20, 0, 0, 0)
-	end = datetime.datetime(2019, 3, 21, 0, 0, 0)
-	target_cow_id = 20128
+	start = datetime.datetime(2018, 12, 30, 0, 0, 0)
+	end = datetime.datetime(2018, 12, 31, 0, 0, 0)
+	target_cow_id = 20158
 
 	# 休息教師データから分布を取得
 	rest_df = pd.read_csv(rest_dataset_file, sep = ",", header = 0, usecols = [3,5,6], names=('RTime', 'AccumulatedDis', 'VelocityAve')) # csv読み込み
@@ -76,6 +76,6 @@ if __name__ == '__main__':
 			plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
 	
 	# こっちが正解の横臥リスト
-	correct_filename = "behavior_classification/validation_data/20158.csv"
+	correct_filename = "behavior_classification/validation_data/20181230_20158.csv"
 	correct_df = pd.read_csv(correct_filename, sep = ",", header = 0, usecols = [0,3,4], names=('Time', 'Velocity', 'Label')) # csv読み込み
 	plotting.scatter_plot(correct_df['Time'], correct_df['Velocity'], correct_df['Label'])

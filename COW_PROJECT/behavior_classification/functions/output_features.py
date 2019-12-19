@@ -286,14 +286,7 @@ def classify_velocity(v_list):
 		v_list	:速さのリスト
 	return
 		それぞれが振り分けられたクラスタ ("red", "green", "blue") """
-	data_list = []
-	for data in v_list:
-		if (choice_state(data) == 0):
-			data_list.append("red")
-		elif (choice_state(data) == 1):
-			data_list.append("green")
-		else:
-			data_list.append("blue")
+	data_list = [choice_state(data) for data in v_list]
 	return data_list
 
 def output_features(filename, date:datetime, cow_id):

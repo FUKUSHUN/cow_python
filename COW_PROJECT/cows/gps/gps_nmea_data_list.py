@@ -94,11 +94,11 @@ class GpsNmeaDataList:
 		lon_interval = (lon_e - lon_s) / interval
 		vel_interval = (vel_e - vel_s) / interval
 		for i in range(interval):
-			lat = lat_s + lat_interval * (i)
-			lon = lon_s + lon_interval * (i)
-			vel = vel_s + vel_interval * (i)
+			lat = lat_s + lat_interval * (i+1)
+			lon = lon_s + lon_interval * (i+1)
+			vel = vel_s + vel_interval * (i+1)
 			#print(lat, ",", lon, ",", vel)
-			dt_i = dt_s + datetime.timedelta(seconds = i)
+			dt_i = dt_s + datetime.timedelta(seconds = i+1)
 			g = gps.GpsNmeaData(dt_i, lat, lon, vel)
 			interpolation_list.append(g)
 		return interpolation_list #startはこの補間リストに含まれない (前回の補間時に含まれるため重複を避けたい...)
