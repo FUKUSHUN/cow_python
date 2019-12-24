@@ -12,10 +12,10 @@ class MyGaussianDistribution:
 
     def __init__(self, df):
         self.df = df
-        self.mean_vector = self.get_mean_vector(df)
-        self.cov_matrix = self.get_cov_matrix(df)
+        self.mean_vector = self.calc_mean_vector(df)
+        self.cov_matrix = self.calc_cov_matrix(df)
 
-    def get_mean_vector(self, df):
+    def calc_mean_vector(self, df):
         """ 平均ベクトルを求める """
         mean_vector = np.zeros((len(df.columns), 1))
         for i, (_, column) in enumerate(df.iteritems()):
@@ -23,7 +23,7 @@ class MyGaussianDistribution:
         print(mean_vector)        
         return mean_vector
 
-    def get_cov_matrix(self, df):
+    def calc_cov_matrix(self, df):
         """ 共分散行列を求める """
         cov_matrix = np.zeros((len(df.columns), len(df.columns)))
         for i, (_, column1) in enumerate(df.iteritems()):
@@ -63,14 +63,24 @@ class MyGaussianDistribution:
             return dis
 
 
+    def get_mean_vector(self):
+        """ 平均ベクトルを取得する """
+        return self.mean_vector
+
+    
+    def get_cov_matrix(self):
+        """ 共分散行列を取得する """
+        return self.cov_matrix
+
+
 """
 if __name__ == "__main__":
     rest_dataset_file = "./training_data/rest_train_data.csv"
     df = pd.read_csv(rest_dataset_file, sep = ",", header = 0, usecols = [0,3,5,6], names=('Time', 'RTime', 'AccumulatedDis', 'VelocityAve')) # csv読み込み
     used_df = df.drop('Time', axis=1)
-    mean_vector = get_mean_vector(used_df)
+    mean_vector = calc_mean_vector(used_df)
     print(mean_vector)
-    cov_matrix = get_cov_matrix(used_df)
+    cov_matrix = calc_cov_matrix(used_df)
     print(cov_matrix)
     #plotting.show_3d_plot(df['RTime'], df['AccumulatedDis'], df['VelocityAve'])
     inv_cov_matrix = np.linalg.inv(cov_matrix) # 逆行列

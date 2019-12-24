@@ -46,15 +46,15 @@ if __name__ == '__main__':
 			# 時系列描画
 			#plotting.line_plot(t_list, v_list)
 			c_list = output_features.classify_velocity(v_list) #クラスタ分けを行う (速さを3つに分類しているだけ)
-			plotting.scatter_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
-			#plotting.scatter_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
+			plotting.scatter_time_plot(t_list, v_list, c_list) #時系列で速さの散布図を表示
+			#plotting.scatter_time_plot(t_list, d_list, c_list) #時系列で速さの散布図を表示
 
 			# 圧縮操作
 			zipped_list = output_features.compress(t_list, p_list, d_list, v_list) # 圧縮する
 
 			#c_list = output_features.classify_velocity([row[3] for row in zipped_list]) # クラスタ分けを行う (速さを3つに分類しているだけ)
-			#plotting.scatter_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
-			#plotting.scatter_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+			#plotting.scatter_time_plot([row[0] for row in zipped_list], [row[2] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
+			#plotting.scatter_time_plot([row[0] for row in zipped_list], [row[3] for row in zipped_list], c_list) # 時系列で速さの散布図を表示
 
 			# ---特徴抽出---
 			output_features.output_feature_info(filename, [row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
@@ -106,5 +106,5 @@ if __name__ == '__main__':
 			#labels = interface.predict_data(probs)
 
 			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
-			plotting.scatter_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
+			plotting.scatter_time_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
 			
