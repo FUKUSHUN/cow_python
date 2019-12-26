@@ -14,3 +14,4 @@ rf/
 svm/
 training_data/
 for_web/*.csv
+build/

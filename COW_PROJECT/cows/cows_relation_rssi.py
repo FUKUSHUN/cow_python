@@ -6,13 +6,15 @@ import sys
 import os
 import shutil
 import math
+
+#自作クラス
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import cow_rssi #自作クラス
-import cowshed_rssi #自作クラス
-import community_history # 自作クラス
-import geography_rssi #自作クラス
-import rssi.rssi_data_list as rssilist#自作クラス
-import rssi.rssi_data as rssidata#自作クラス
+import cow_rssi 
+import cowshed_rssi
+import community_history
+import geography_rssi
+import rssi.rssi_data_list as rssilist
+import rssi.rssi_data as rssidata
 
 class TwoCowsRelation:
     cow_pos_list1:rssilist.RSSIDataList

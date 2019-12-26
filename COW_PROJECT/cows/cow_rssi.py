@@ -2,8 +2,10 @@
 import datetime
 import sys
 import os
+
+#自作クラス
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import rssi.rssi_data_list as rssilist #自作クラス
+import rssi.rssi_data_list as rssilist
 
 class Cow:
 	cow_id:int

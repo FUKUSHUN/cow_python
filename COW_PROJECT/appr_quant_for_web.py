@@ -1,9 +1,5 @@
 #-*- encoding:utf-8 -*-
 import pandas as pd
-import numpy as np
-import cows.cows_community_rssi as comm
-import cows.cows_relation_rssi as cr
-import cows.cowshed_rssi as Cowshed
 import datetime
 import sys
 import gc
@@ -11,18 +7,21 @@ import csv
 import time
 import os
 
-"""
-被接近度（コサイン類似度）を算出するプログラム
-ここでは移動平均を算出する前のファイルを出力するので，移動平均を出すにはanalyze_main/move_ave.pyを実行すること
-"""
+# 自作クラス
+import cows.cows_community_rssi as comm
+import cows.cows_relation_rssi as cr
+import cows.cowshed_rssi as Cowshed
+
+""" 被接近度（コサイン類似度）を算出するプログラム
+    RSSIで推定した位置を元にウェブで動かすことを推定している
+    ここでは移動平均を算出する前のファイルを出力するので，移動平均を出すにはanalyze_main/move_ave.pyを実行すること """
 
 def main_process(rfilepath, wfilepath, start, end):
     """ 被接近度を算出するメインプロセス
         startとendの間隔は1時間であることが約束されている 
         dictを用意し，10分ごとの被接近度を各牛の個体番号の番地に追加していく
         (イメージ)
-        {20xxx:[0.653, 0.134, ...], 20yyy:[0.415, 0.345, ...], ...}
-        """
+        {20xxx:[0.653, 0.134, ...], 20yyy:[0.415, 0.345, ...], ...} """
     dt = start
     cows = Cowshed.Cowshed(dt, rfilepath) # その時いる牛を取得
     cow_ids = cows.get_cow_ids() # その時いる牛の個体番号を取得

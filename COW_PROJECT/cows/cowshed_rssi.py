@@ -6,8 +6,10 @@ import glob
 import re
 import time
 import sys, os
+
+#自作クラス
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import cow_rssi #自作クラス
+import cow_rssi 
 
 class Cowshed:
     date:str #YYYY/mm/dd

@@ -1,11 +1,12 @@
 #-*- encoding:utf-8 -*-
 import math
-import numpy as np
 import sys
 import os
+
+#自作クラス
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import rssi.rssi_data as rssidata #自作クラス
-import rssi.rssi_data_list as rssilist #自作クラス
+import rssi.rssi_data as rssidata
+import rssi.rssi_data_list as rssilist
 
 
 def get_absolute_speed(p1:rssidata.RSSIData, p2:rssidata.RSSIData):
