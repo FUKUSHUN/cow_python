@@ -42,15 +42,12 @@ class RSSIDataList:
         filename = self._csv_file_path + self.__make_file_format(date) + "/" + str(cow_id) + ".csv"
         with open(filename, mode = "r") as f:
             reader = csv.reader(f)
-            index = 0
             for row in reader:
-                if (index % 5 == 0):
-                    time = datetime.datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%S")
-                    lat = float(row[1])
-                    lon = float(row[2])
-                    g = rssi.RSSIData(time, lat, lon)
-                    self.rssi_list.append(g)
-            index += 1
+                time = datetime.datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%S")
+                lat = float(row[1])
+                lon = float(row[2])
+                g = rssi.RSSIData(time, lat, lon)
+                self.rssi_list.append(g)
         return
 
 
