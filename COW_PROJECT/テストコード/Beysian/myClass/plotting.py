@@ -84,6 +84,8 @@ class PlotUtility:
             for x1, y1, z1, c1 in zip(x, y, z, c):
                 self.ax.scatter(x1, y1, z1, "o", c=self.color_table[c1])
 
+    def hist_plot(self, X, bins, color=None):
+        self.ax.hist(X, bins=bins, rwidth=0.95, color=color, stacked=True)
 
     def show(self):
         plt.show()

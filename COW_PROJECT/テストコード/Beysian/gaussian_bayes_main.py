@@ -37,54 +37,55 @@ def add_stdiviation(mean_list, cov_list):
     return plusone, minusone
 
 
-# 回帰のためのデータ点を生成
-coefficient_vector = np.array([[0, 3, -4, 1]]).T
-random_varience = 0.1
-scope = (0,3)
-t, _, y = create_artificial_data(coefficient_vector, 0, 0.001, scope) # ノイズなし正解の曲線
-t1, _, y1 = create_artificial_data(coefficient_vector, random_varience, 0.03, scope) # ノイズを含んだデータ点
+if __name__ == '__main__':
+    # 回帰のためのデータ点を生成
+    coefficient_vector = np.array([[0, 3, -4, 1]]).T
+    random_varience = 0.1
+    scope = (0,3)
+    t, _, y = create_artificial_data(coefficient_vector, 0, 0.001, scope) # ノイズなし正解の曲線
+    t1, _, y1 = create_artificial_data(coefficient_vector, random_varience, 0.03, scope) # ノイズを含んだデータ点
 
-# 描画
-ploter = plotting.PlotUtility()
-ploter.scatter_plot(t, y, [0 for i in range(len(t))])
-ploter.scatter_plot(t1, y1, [0 for i in range(len(t1))])
+    # 描画
+    plotter = plotting.PlotUtility()
+    plotter.scatter_plot(t, y, [0 for i in range(len(t))])
+    plotter.scatter_plot(t1, y1, [0 for i in range(len(t1))])
 
-# 事前分布のパラメータ
-likelihood = [] # 周辺尤度を格納するリスト
-mean = [np.array([[0]]).T, \
-        np.array([[0, 0]]).T, \
-        np.array([[0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0]]).T, \
-        np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]).T]
-cov = [np.array([[1]]), \
-        np.array([[1, 0], [0, 1]]), \
-        np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), \
-        np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 1]]), \
-        np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])]
-        
-        
-pre_noise = 10
-# 推論
-for i in range(len(mean)):
-    _, X, _ = create_artificial_data(mean[i], 0, 0.001, scope) # i 次元の目盛りとなるi * N行列を生成
-    dist = myGausse.GaussianLenearRegression(mean[i], cov[i], pre_noise)
-    likelihood.append(dist.inference(X, y))
-    y2, y_cov = dist.predict(X)
-    ploter.scatter_plot(t, y2, [i+1 for j in range(len(t))])
+    # 事前分布のパラメータ
+    likelihood = [] # 周辺尤度を格納するリスト
+    mean = [np.array([[0]]).T, \
+            np.array([[0, 0]]).T, \
+            np.array([[0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0]]).T, \
+            np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]).T]
+    cov = [np.array([[1]]), \
+            np.array([[1, 0], [0, 1]]), \
+            np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]]), \
+            np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0], [0, 1, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 1, 0], [0, 0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 1]]), \
+            np.array([[1, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]])]
+            
+            
+    pre_noise = 10
+    # 推論
+    for i in range(len(mean)):
+        _, X, _ = create_artificial_data(mean[i], 0, 0.001, scope) # i 次元の目盛りとなるi * N行列を生成
+        dist = myGausse.GaussianLenearRegression(mean[i], cov[i], pre_noise)
+        likelihood.append(dist.inference(X, y))
+        y2, y_cov = dist.predict(X)
+        plotter.scatter_plot(t, y2, [i+1 for j in range(len(t))])
 
-# 周辺尤度の視覚化
-ploter_likelihood = plotting.PlotUtility()
-ploter_likelihood.line_plot([i for i in range(len(mean))], likelihood)
+    # 周辺尤度の視覚化
+    ploter_likelihood = plotting.PlotUtility()
+    ploter_likelihood.line_plot([i for i in range(len(mean))], likelihood)
 
-ploter.show()
-ploter_likelihood.show()
+    plotter.show()
+    ploter_likelihood.show()
