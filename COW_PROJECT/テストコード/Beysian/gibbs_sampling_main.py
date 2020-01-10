@@ -22,5 +22,5 @@ if __name__ == '__main__':
     
     # データを可視化
     plotter = plotting.PlotUtility()
-    plotter.hist_plot([X1,X2], 20, color=None)
+    plotter.hist_plot([X1,X2], 20, color=None) # ヒストグラムを表示，正解で色分け
     plotter.show()
