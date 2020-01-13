@@ -1,0 +1,14 @@
+import numpy as np
+from scipy import stats
+
+#カテゴリカル分布（歪んだサイコロ）
+xk = np.arange(6)
+pk = np.array([1/6,1/6,1/6,1/6,1/6,1/6]) #仮に1を超えた場合はそれ以降の値は出現しない（この場合は0~3までが生成される）
+custm = stats.rv_discrete(name='custm', values=(xk, pk))
+print(custm.rvs(size=1))
+
+# ガンマ分布
+print(np.random.gamma(1, scale=1/5))
+
+# ディリクレ分布
+print(np.random.dirichlet(np.array([0.5, 0.5, 0.5])))
