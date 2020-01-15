@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import myClass.plotting as plotting
 import myClass.mixed_model as mixed_model
 
-def create_artificial_data(lam, num):
+def create_artificial_poissondata(lam, num):
     """ テスト用のデータセットを作成する
         Parameter
             lam : ポアソン分布のλパラメータ (1次元)
@@ -14,7 +14,17 @@ def create_artificial_data(lam, num):
     X = np.random.poisson(lam, num) # ndarray
     return X
 
+def create_artificial_gaussiandata(mu, cov, num):
+    """ テスト用のデータセットを作成する
+        Parameter
+            mu      : ガウス分布の平均パラメータ (多次元)
+            cov  : ガウス分布の分散共分散行列パラメータ
+            num :   : データ生成個数 """
+    X = np.random.multivariate_normal(mu, cov, num) # ndarray
+    return X
+
 def extract_data(X, S, k):
+    """ Sの結果からk番目のクラスタに所属するデータをXから抽出する """
     N = len(X.T)
     new_X = []
     for n in range(N):
@@ -22,10 +32,11 @@ def extract_data(X, S, k):
             new_X.append(X[0,n])
     return new_X
 
-if __name__ == '__main__':
+def poisson_mixed_model_test():
+    """ 1次元の入力データをポアソン混合モデルを用いてクラスタリングする """
     # 多峰性の1次元データ点を生成
-    X1 = create_artificial_data(20, 1000)
-    X2 = create_artificial_data(50, 750)
+    X1 = create_artificial_poissondata(20, 1000)
+    X2 = create_artificial_poissondata(50, 750)
     X = np.hstack((X1, X2)) # 2つのndarrayを結合
     np.random.shuffle(X) # データをシャッフル
     X = np.array([X]) # データの2次元化
@@ -62,3 +73,14 @@ if __name__ == '__main__':
     plotter.show()
     plotter2.show()
     plotter_prob.show()
+
+
+if __name__ == '__main__':
+    #poisson_mixed_model_test()
+    # 多峰性の2次元データ点を生成
+    X1 = create_artificial_gaussiandata(np.array([30, 40]), np.array([[100, 25], [25, 100]]), 1100)
+    X2 = create_artificial_gaussiandata(np.array([70, 20]), np.array([[150, 75], [75, 150]]), 900)
+    plotter = plotting.PlotUtility()
+    plotter.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
+    plotter.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
+    plotter.show()
