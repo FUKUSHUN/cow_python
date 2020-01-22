@@ -12,3 +12,10 @@ print(np.random.gamma(1, scale=1/5))
 
 # ディリクレ分布
 print(np.random.dirichlet(np.array([0.5, 0.5, 0.5])))
+
+# ウィシャート分布
+wish = stats.wishart(df=3,scale=np.array([[1.0, 0.5], [0.5, 1.0]]))
+print(wish.rvs(1)[0]) # 乱数を1個生成
+
+# ガウス分布
+print(np.random.multivariate_normal(np.array([0, 0]), np.array([[1.0, 0.5], [0.5, 2.0]])))

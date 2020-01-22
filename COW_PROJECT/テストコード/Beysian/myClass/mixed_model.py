@@ -1,6 +1,7 @@
 import math
 import numpy as np
-from scipy import stats # カテゴリ分布から乱数を生成
+from scipy import stats # カテゴリ分布から乱数を生成, ウィシャート分布から乱数を生成
+import pdb # デバッグ用
 
 """ ポアソン混合モデルを仮定したギブスサンプリングによるクラスタリングを行うクラス
     入力データは1次元のものを扱う """
@@ -24,8 +25,7 @@ class PoissonMixedModel:
                 X       : 1*N行列   1次元だが行列として扱う
                 a_0, b_0    : ガンマ分布のハイパーパラメータ
             Return
-                S   : K*N行列   予測した各クラスの割り当て
-                P   : K*N行列   各データの予測確率 """
+                S   : K*N行列   予測した各クラスの割り当て """
         N, K = len(X.T), len(self.lambda_vector) # データ数とクラスタ数
         S = np.zeros((K, N)) # K*N行列，1ofK表現    クラスタの割り当ての行列
         eta = np.zeros((K, N)) # K*N行列    カテゴリ分布のパラメータ
@@ -35,8 +35,8 @@ class PoissonMixedModel:
             self._sample_s(X, S, eta, N, K)
             self._sample_lambda(X, S, N, K, a_0, b_0)
             self._sample_pi(S, N, K)
-        print(self.lambda_vector)
-        print(self.pi_vector)
+        print("lambda: ", self.lambda_vector)
+        print("pi: ", self.pi_vector)
         return S
 
     def _sample_s(self, X, S, eta, N, K):
@@ -122,6 +122,138 @@ class PoissonMixedModel:
 
     def get_lambda_vector(self):
         return self.lambda_vector
+    
+    def get_pi_vector(self):
+        return self.pi_vector
+
+
+""" ガウス混合モデルを仮定したギブスサンプリングによるクラスタリングを行うクラス
+    入力データは多次元のものを扱う """
+class GaussianMixedModel:
+    cov_matrixes = None # D*D行列をK個持つリスト ガウス分布の分散共分散行列パラメータをクラスタ数K個並べたもの
+    mu_vectors = None # 1*D行列をK個持つリスト  ガウス分布の平均パラメータのベクトルをクラスタ数K個並べたもの
+    pi_vector = None # K次元ベクトル  カテゴリ分布の各生起確率のベクトル
+    _m_vector = None # K次元ベクトル  ガウス・ウィシャート分布のハイパーパラメータ
+    _beta = None # スカラー値   ガウス・ウィシャート分布のハイパーパラメータ
+    _nd = None # スカラー値 ガウス・ウィシャート分布のハイパーパラメータ
+    _W = None # D*D行列 ガウス・ウィシャート分布のハイパーパラメータ
+    _alpha_vector = None # K次元ベクトル   ディレクレ分布のハイパーパラメータ
+    _maxiter = 100 # 最大反復回数
+
+    def __init__(self, cov_matrixes, mu_vectors, pi_vector, alpha_vector, num):
+        self.cov_matrixes = cov_matrixes
+        self.mu_vectors = mu_vectors
+        self.pi_vector = pi_vector
+        self._alpha_vector = alpha_vector
+        self._maxiter = num
+    
+    def gibbs_sample(self, X, m, beta, nd, W):
+        """ ギブスサンプリングにより各クラスタの真値を推定する
+            Parameter
+                X       : D*N行列
+                m       : D次元ベクトル     ガウス・ウィシャート分布のハイパーパラメータ
+                beta    : >0のスカラー値    ガウス・ウィシャート分布のハイパーパラメータ
+                nd      : >D-1のスカラー値  ガウス・ウィシャート分布のハイパーパラメータ
+                W       : D*D行列           ガウス・ウィシャート分布のハイパーパラメータ
+            Return
+                S   : K*N行列   予測した各クラスの割り当て """
+        D, N, K = len(X), len(X.T), len(self.pi_vector) # 次元数とデータ数とクラスタ数
+        m_list = [None] * K # K個の要素を持つリスト
+        beta_list = [0.0] * K # K個の要素を持つリスト
+        nd_list = [0.0] * K # K個の要素を持つリスト
+        W_list = [None] * K # K個の要素を持つリスト
+        S = np.zeros((K, N)) # K*N行列，1ofK表現    クラスタの割り当ての行列
+        eta = np.zeros((K, N)) # K*N行列    カテゴリ分布のパラメータ
+        self._initialize(m_list, beta_list, nd_list, W_list, m, beta, nd, W, K)
+        for i in range(self._maxiter):
+            print(i+1, "回目のサンプリング")
+            self._sample_s(X, S, eta, N, K, D)
+            self._sample_gaussian_parameters(X, S, m_list, beta_list, nd_list, W_list, N, K)
+            self._sample_pi(S, N, K)
+        print("mu: ", self.mu_vectors)
+        print("cov: ", self.cov_matrixes)
+        print("pi: ", self.pi_vector)
+        return S
+
+    def _initialize(self, m_list, beta_list, nd_list, W_list, m, beta, nd, W, K):
+        self._m_vector, self._beta, self._nd, self._W = m, beta, nd, W
+        for k in range(K):
+            beta_list[k] = beta
+            m_list[k] = m
+            nd_list[k] = nd
+            W_list[k] = W
+        return
+
+    def _sample_s(self, X, S, eta, N, K, D):
+        """ S[n]をサンプルする
+            Parameter
+                X   : D*N行列   入力データ
+                S   : K*N行列   予測した各クラスの割り当て
+                N   : データ数
+                K   : クラスタ数
+                D   : データの次元数 """
+        xk = np.arange(K)
+        mu = np.zeros((K,D,1))
+        lam = np.zeros((K,D,D))
+        for n in range(N):
+            for k in range(K):
+                mu[k] = np.array([self.mu_vectors[k]]).T
+                lam[k] = np.linalg.inv(self.cov_matrixes[k])
+                eta[k,n] = np.exp(-1/2 * (np.dot((X[:,n:n+1] - mu[k]).T, np.dot(lam[k], (X[:,n:n+1] - mu[k])))[0,0]) + 1/2 * np.log(np.linalg.det(lam[k])) + np.log(self.pi_vector[k]))
+            sum_eta_n = sum(eta[:,n])
+            for k in range(K):
+                eta[k,n] = eta[k,n] / sum_eta_n
+            # snをサンプル
+            custm = stats.rv_discrete(name='custm', values=(xk, eta[:,n]))
+            rnd = custm.rvs(size=1)
+            S[:,n] = np.array([1 if (k == rnd[0]) else 0 for k in range(K)])
+            # pdb.set_trace()
+        return
+    
+    def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K):
+        """ ガウス分布のパラメータΛ_k, μ_kをサンプルする
+            Parameter
+                X   : D*N行列   入力データ
+                S   : K*N行列   予測した各クラスの割り当て
+                m_list, beta_list, nd_list, W_list
+                N   : データ数
+                K   : クラスタ数 """
+        for k in range(K):
+            sum_s = 0.0
+            sum_sx = np.zeros((2,1))
+            sum_sxx = np.zeros((2,2))
+            for n in range(N):
+                sum_s += S[k, n]
+                sum_sx += np.dot(S[k, n], X[:,n:n+1])
+                sum_sxx += np.dot(S[k, n], np.dot(X[:,n:n+1], X[:,n:n+1].T))
+            # パラメータ更新，この順番に更新するのが正しい? 
+            beta_list[k] = sum_s + self._beta
+            m_list[k] = (sum_sx + np.dot(self._beta, self._m_vector)) / beta_list[k]
+            W_list[k] = np.linalg.inv(sum_sxx + np.dot(self._beta, np.dot(self._m_vector, self._m_vector.T)) - np.dot(beta_list[k], np.dot(m_list[k], m_list[k].T)) + np.linalg.inv(self._W))
+            nd_list[k] = sum_s + self._nd
+            # ガウス分布のパラメータをサンプリング，この順番に更新するのが正しい
+            wish = stats.wishart(df=nd_list[k],scale=W_list[k])
+            self.cov_matrixes[k] = np.linalg.inv(wish.rvs(1))
+            self.mu_vectors[k] = np.random.multivariate_normal(np.squeeze(m_list[k].T), 1/beta_list[k] * self.cov_matrixes[k])
+            # pdb.set_trace()
+        return
+
+    def _sample_pi(self, S, N, K):
+        """ piをサンプルする
+            Parameter
+                S   : K*N行列   予測した各クラスの割り当て
+                N   : データ数
+                K   : クラスタ数 """
+        for k in range(K):
+            for n in range(N):
+                self._alpha_vector[k] += S[k,n]
+        # pi_vectorをサンプル
+        self.pi_vector = np.random.dirichlet(self._alpha_vector)
+        # pdb.set_trace()
+        return
+
+    def get_gaussian_parameters(self):
+        return self.mu_vectors, self.cov_matrixes
     
     def get_pi_vector(self):
         return self.pi_vector

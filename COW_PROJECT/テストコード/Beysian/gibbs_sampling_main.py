@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pdb # デバッグ用
 
 # 自作クラス
 import myClass.plotting as plotting
@@ -29,7 +30,7 @@ def extract_data(X, S, k):
     new_X = []
     for n in range(N):
         if (S[k, n] == 1):
-            new_X.append(X[0,n])
+            new_X.append(X[:,n])
     return new_X
 
 def poisson_mixed_model_test():
@@ -74,13 +75,42 @@ def poisson_mixed_model_test():
     plotter2.show()
     plotter_prob.show()
 
-
-if __name__ == '__main__':
-    #poisson_mixed_model_test()
+def gaussian_mixed_model_test():
     # 多峰性の2次元データ点を生成
     X1 = create_artificial_gaussiandata(np.array([30, 40]), np.array([[100, 25], [25, 100]]), 1100)
     X2 = create_artificial_gaussiandata(np.array([70, 20]), np.array([[150, 75], [75, 150]]), 900)
+    X = np.concatenate([X1, X2], 0) # 2つのndarrayを結合
+    np.random.shuffle(X) # データをシャッフル
+    X = X.T
+
+    # データの可視化
     plotter = plotting.PlotUtility()
     plotter.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
     plotter.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
+
+    # ガウス混合分布のパラメータ設定
+    mu_vectors = [np.array([30, 50]), np.array([70, 50])]
+    cov_matrixes = [np.array([[110, 45], [45, 110]]), np.array([[130, 55], [55, 130]])]
+    pi_vector = np.array([0.6, 0.4])
+    alpha_vector = np.array([1, 1])
+    max_iterater = 30
+
+    # ギブスサンプリングによるクラスタリング
+    gaussian_model = mixed_model.GaussianMixedModel(cov_matrixes, mu_vectors, pi_vector, alpha_vector, max_iterater)
+    result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1.0, 0], [0, 1.0]]))
+    
+    # クラスタリング結果を可視化
+    X1 = np.array(extract_data(X, result, 0))
+    X2 = np.array(extract_data(X, result, 1))
+    plotter2 = plotting.PlotUtility()
+    plotter2.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
+    plotter2.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
+
+    # 表示
     plotter.show()
+    plotter2.show()
+
+
+if __name__ == '__main__':
+    poisson_mixed_model_test()
+    gaussian_mixed_model_test()
