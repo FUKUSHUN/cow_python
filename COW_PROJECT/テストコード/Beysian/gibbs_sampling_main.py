@@ -56,6 +56,8 @@ def poisson_mixed_model_test():
     a_0, b_0 = 1, 1
     poisson_model = mixed_model.PoissonMixedModel(lambda_vector, pi_vector, alpha_vector, max_iterater)
     result = poisson_model.gibbs_sample(X, a_0, b_0)
+
+    # 新たな入力に対する確率を推定
     new_X = np.array([np.arange(1,100)])
     prob_matrix = poisson_model.predict(new_X)
 
@@ -93,11 +95,17 @@ def gaussian_mixed_model_test():
     cov_matrixes = [np.array([[110, 45], [45, 110]]), np.array([[130, 55], [55, 130]])]
     pi_vector = np.array([0.6, 0.4])
     alpha_vector = np.array([1, 1])
-    max_iterater = 30
+    max_iterater = 10
 
     # ギブスサンプリングによるクラスタリング
     gaussian_model = mixed_model.GaussianMixedModel(cov_matrixes, mu_vectors, pi_vector, alpha_vector, max_iterater)
     result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1.0, 0], [0, 1.0]]))
+
+    # 新たな入力に対する確率を推定
+    new_X1 = np.array(np.arange(1,200))
+    new_X2 = np.array(np.arange(1,200))
+    new_X = np.array([new_X1, new_X2])
+    prob_matrix = gaussian_model.predict(new_X)
     
     # クラスタリング結果を可視化
     X1 = np.array(extract_data(X, result, 0))
@@ -106,11 +114,16 @@ def gaussian_mixed_model_test():
     plotter2.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
     plotter2.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
 
+    plotter_prob = plotting.PlotUtility()
+    prob1, prob2 = prob_matrix[0], prob_matrix[1]
+    plotter_prob.show_3d_plot(new_X[0], new_X[1], prob1)
+
     # 表示
     plotter.show()
     plotter2.show()
+    plotter_prob.show()
 
 
 if __name__ == '__main__':
-    poisson_mixed_model_test()
+    #poisson_mixed_model_test()
     gaussian_mixed_model_test()

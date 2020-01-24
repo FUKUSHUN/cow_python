@@ -138,6 +138,7 @@ class GaussianMixedModel:
     _nd = None # スカラー値 ガウス・ウィシャート分布のハイパーパラメータ
     _W = None # D*D行列 ガウス・ウィシャート分布のハイパーパラメータ
     _alpha_vector = None # K次元ベクトル   ディレクレ分布のハイパーパラメータ
+    _student_parameters = None # (mu, lam, nd) 予測分布の各パラメータ，学習後にまとめてセット
     _maxiter = 100 # 最大反復回数
 
     def __init__(self, cov_matrixes, mu_vectors, pi_vector, alpha_vector, num):
@@ -173,6 +174,7 @@ class GaussianMixedModel:
         print("mu: ", self.mu_vectors)
         print("cov: ", self.cov_matrixes)
         print("pi: ", self.pi_vector)
+        self._set_predict_parameters(m_list, beta_list, W_list, nd_list, D, K)
         return S
 
     def _initialize(self, m_list, beta_list, nd_list, W_list, m, beta, nd, W, K):
@@ -251,6 +253,40 @@ class GaussianMixedModel:
         self.pi_vector = np.random.dirichlet(self._alpha_vector)
         # pdb.set_trace()
         return
+
+    def _set_predict_parameters(self, m_list, beta_list, W_list, nd_list, D, K):
+        """ 予測分布に使用するパラメータをタプルで登録する """
+        self._student_parameters = []
+        for k in range(K):
+            mu = m_list[k]
+            lam = (1 - D + nd_list[k]) * beta_list[k] / (1 + beta_list[k]) * W_list[k]
+            nd = 1 - D + nd_list[k]
+            self._student_parameters.append((mu, lam, nd))
+        return
+
+    def predict(self, new_X):
+        """ 新規入力に対する確率を推定する（正規化はしていない） """
+        D, M, K = len(new_X), len(new_X.T), len(self._student_parameters) # 入力データ数とクラスタ数
+        prob = np.zeros((K,M)) # 各クラスタからの生成確率
+        sum_alpha = sum(self._alpha_vector)
+        for k in range(K):
+            alpha = self._alpha_vector[k] / sum_alpha
+            mu = self._student_parameters[k][0]
+            lam = self._student_parameters[k][1]
+            nd = self._student_parameters[k][2]
+            for m in range(M):
+                equ1 = 0.0
+                print(k, m, "の計算")
+                for d in range(1, D+1):
+                    equ1 += math.log((nd + d) / 2)
+                print("equ1", equ1)
+                equ2 = math.log(np.linalg.det(lam)) / 2 - D * math.log(math.pi * nd) / 2
+                print("equ2", equ2)
+                equ3 = -1 * (nd + D) * math.log(1 + 1/nd * np.dot((new_X[:,m:m+1] - mu).T, np.dot(lam, (new_X[:,m:m+1] - mu))))
+                print("equ3", equ3)
+                prob[k,m] = alpha * math.exp(equ1 + equ2 + equ3)
+        return prob
+
 
     def get_gaussian_parameters(self):
         return self.mu_vectors, self.cov_matrixes
