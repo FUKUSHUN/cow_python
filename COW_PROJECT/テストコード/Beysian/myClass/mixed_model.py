@@ -279,11 +279,8 @@ class GaussianMixedModel:
                 print(k, m, "の計算")
                 for d in range(1, D+1):
                     equ1 += math.log((nd + d) / 2)
-                print("equ1", equ1)
                 equ2 = math.log(np.linalg.det(lam)) / 2 - D * math.log(math.pi * nd) / 2
-                print("equ2", equ2)
                 equ3 = -1 * (nd + D) * math.log(1 + 1/nd * np.dot((new_X[:,m:m+1] - mu).T, np.dot(lam, (new_X[:,m:m+1] - mu))))
-                print("equ3", equ3)
                 prob[k,m] = alpha * math.exp(equ1 + equ2 + equ3)
         return prob
 

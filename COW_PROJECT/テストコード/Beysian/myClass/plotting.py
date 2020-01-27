@@ -14,7 +14,7 @@ class PlotUtility:
     def __init__(self, fig = None, ax = None):
         if (fig is None or ax is None):
             self.fig = plt.figure()
-            self.ax = self.fig.add_subplot(1,1,1)
+            self.ax = self.fig.add_subplot(111)
         else:
             self.fig = fig
             self.ax = ax
@@ -63,29 +63,53 @@ class PlotUtility:
         c = np.array(color_list)
         self.ax.scatter(x, y, c = c, s = size)
 
+    def hist_plot(self, X, bins, color=None):
+        self.ax.hist(X, bins=bins, rwidth=0.95, color=color, stacked=True)
 
-    def show_3d_plot(self, x, y, z, c=None):
+    def show(self):
+        plt.show()
+
+    def save_fig(self, filename):
+        plt.savefig(filename)
+
+class PlotUtility3D:
+    fig = None
+    ax = None # 今のところ1行1列の図
+    color_table = ['black', 'blue','green','red','yellow','pink','orangered','orange','lime','deepskyblue','gold']
+
+    def __init__(self, fig = None, ax = None):
+        if (fig is None or ax is None):
+            self.fig = plt.figure()
+            self.ax = self.fig.add_subplot(111, projection='3d')
+        else:
+            self.fig = fig
+            self.ax = ax
+
+    def plot_scatter(self, x, y, z, c="#00aa00"):
         """ 3次元散布図を作成する
         Parameter
             x, y, z : それぞれ各次元のリスト
             c   : クラスタリング済みの場合は色分けを行う（デフォルトは一色）"""
-        # グラフ作成
-        self.ax = mpl3d.Axes3D(self.fig)
-
         # 軸ラベルの設定
         self.ax.set_xlabel("First")
         self.ax.set_ylabel("Second")
         self.ax.set_zlabel("Third")
 
         # 散布図作成
-        if (c is None):
-            self.ax.scatter(x, y, z, "o", c="#00aa00")
-        else:
-            for x1, y1, z1, c1 in zip(x, y, z, c):
-                self.ax.scatter(x1, y1, z1, "o", c=self.color_table[c1])
+        self.ax.scatter3D(x, y, z, c=c)
+        self.ax.set_title("Scatter Plot")
+        return
 
-    def hist_plot(self, X, bins, color=None):
-        self.ax.hist(X, bins=bins, rwidth=0.95, color=color, stacked=True)
+    def plot_surface(self, x, y, z, c=0):
+        # 軸ラベルの設定
+        self.ax.set_xlabel("First")
+        self.ax.set_ylabel("Second")
+        self.ax.set_zlabel("Third")
+
+        # 散布図作成
+        self.ax.plot_surface(x, y, z, color=self.color_table[c], alpha=0.5, linewidth=0)
+        self.ax.set_title("Surface Plot")
+        return
 
     def show(self):
         plt.show()

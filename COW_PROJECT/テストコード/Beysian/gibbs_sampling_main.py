@@ -87,8 +87,8 @@ def gaussian_mixed_model_test():
 
     # データの可視化
     plotter = plotting.PlotUtility()
-    plotter.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
-    plotter.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
+    plotter.scatter_plot(X1[:,0], X1[:,1], [1 for _ in range(len(X1))])
+    plotter.scatter_plot(X2[:,0], X2[:,1], [2 for _ in range(len(X2))])
 
     # ガウス混合分布のパラメータ設定
     mu_vectors = [np.array([30, 50]), np.array([70, 50])]
@@ -102,21 +102,23 @@ def gaussian_mixed_model_test():
     result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1.0, 0], [0, 1.0]]))
 
     # 新たな入力に対する確率を推定
-    new_X1 = np.array(np.arange(1,200))
-    new_X2 = np.array(np.arange(1,200))
-    new_X = np.array([new_X1, new_X2])
+    new_X = np.arange(1,101, 2)
+    new_Y = np.arange(1,101, 2)
+    grid_X, grid_Y = np.meshgrid(new_X, new_Y)
+    new_X = np.array([grid_X.ravel(), grid_Y.ravel()])
     prob_matrix = gaussian_model.predict(new_X)
     
     # クラスタリング結果を可視化
     X1 = np.array(extract_data(X, result, 0))
     X2 = np.array(extract_data(X, result, 1))
     plotter2 = plotting.PlotUtility()
-    plotter2.scatter_plot(X1[:,0], X1[:,1], [0 for _ in range(len(X1))])
-    plotter2.scatter_plot(X2[:,0], X2[:,1], [1 for _ in range(len(X2))])
+    plotter2.scatter_plot(X1[:,0], X1[:,1], [1 for _ in range(len(X1))])
+    plotter2.scatter_plot(X2[:,0], X2[:,1], [2 for _ in range(len(X2))])
 
-    plotter_prob = plotting.PlotUtility()
+    plotter_prob = plotting.PlotUtility3D()
     prob1, prob2 = prob_matrix[0], prob_matrix[1]
-    plotter_prob.show_3d_plot(new_X[0], new_X[1], prob1)
+    plotter_prob.plot_surface(grid_X, grid_Y, prob1.reshape([50, 50]), c=1)
+    plotter_prob.plot_surface(grid_X, grid_Y, prob2.reshape([50, 50]), c=2)
 
     # 表示
     plotter.show()
