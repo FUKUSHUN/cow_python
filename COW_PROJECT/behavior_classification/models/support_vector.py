@@ -1,12 +1,17 @@
 import numpy as np
 import pandas as pd
 import pickle
+import os
+import sys
 from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC # サポートベクターマシーン
 from sklearn.multiclass import OneVsRestClassifier # 1対多分類サポートベクターマシン
 from sklearn.metrics import (roc_curve, auc, accuracy_score)
 
 # 自作モジュール
+os.chdir('../') # カレントディレクトリを一階層上へ
+print(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import functions.evaluation_of_classifier as evaluation
 
 
@@ -23,19 +28,19 @@ if __name__ == '__main__':
     model1 = OneVsRestClassifier(model1)
     model1 = evaluation.learn(model1, train_dataset1, "Target1")
     evaluation1 = evaluation.evaluate(model1, test_dataset1, "Target1")
-    evaluation.output_csv("./rf/validation_r.csv", model1, test_dataset1, "Target1", ["REST_Proba", "GRAZE_Proba"])
+    evaluation.output_csv("./models/svm/validation_r.csv", model1, test_dataset1, "Target1", ["REST_Proba", "GRAZE_Proba"])
 
     model2 = SVC(C=1.0, kernel='rbf', gamma=0.05, random_state=0, probability=True) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
     model2 = OneVsRestClassifier(model2)
     model2 = evaluation.learn(model2, train_dataset2, "Target2")
     evaluation2 = evaluation.evaluate(model2, test_dataset2, "Target2")
-    evaluation.output_csv("./svm/validation_a.csv", model2, test_dataset2, "Target2", ["REST_Proba", "GRAZE_Proba", "WALK_Proba"])
+    evaluation.output_csv("./models/svm/validation_a.csv", model2, test_dataset2, "Target2", ["REST_Proba", "GRAZE_Proba", "WALK_Proba"])
 
     print(evaluation1)
     print(evaluation2)
 
     # モデルを保存する
-    filename1 = 'svm/model.pickle'
+    filename1 = './models/svm/model.pickle'
     pickle.dump(model1, open(filename1, 'wb'))
-    filename2 = 'svm/model2.pickle'
+    filename2 = './models/svm/model2.pickle'
     pickle.dump(model2, open(filename2, 'wb'))

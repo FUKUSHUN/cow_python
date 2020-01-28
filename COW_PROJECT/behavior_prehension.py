@@ -74,8 +74,8 @@ if __name__ == '__main__':
 			plt.show()
 			
 			# --- 分析 ---
-			filename1 = "behavior_classification/bst/model.pickle"
-			filename2 = "behavior_classification/bst/model2.pickle"
+			filename1 = "behavior_classification/models/bst/model.pickle"
+			filename2 = "behavior_classification/models/bst/model2.pickle"
 		
 			labels = []
 			probs = []

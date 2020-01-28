@@ -11,16 +11,19 @@ import matplotlib.dates as mdates
 from sklearn.externals import joblib
 import pickle
 
+os.chdir('../../') # カレントディレクトリを一階層上へ
+print(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 # 自作クラス
 import cows.geography as geo
-import behavior_classification.hmm as hmm
-import behavior_classification.loading as loading
-import behavior_classification.preprocessing as preprocessing
-import behavior_classification.plotting as plotting
-import behavior_classification.analyzing as analyzing
-import behavior_classification.regex as regex
-import behavior_classification.postprocessing as postprocessing
-import behavior_classification.output_features as output_features
+import behavior_classification.functions.hmm as hmm
+import behavior_classification.functions.loading as loading
+import behavior_classification.functions.preprocessing as preprocessing
+import behavior_classification.functions.plotting as plotting
+import behavior_classification.functions.analyzing as analyzing
+import behavior_classification.functions.regex as regex
+import behavior_classification.functions.postprocessing as postprocessing
+import behavior_classification.functions.output_features as output_features
 import image.adjectory_image as disp
 
 """
@@ -30,12 +33,7 @@ import image.adjectory_image as disp
 if __name__ == '__main__':
     filename = "behavior_classification/training_data/features.csv"
     start = datetime.datetime(2018, 12, 20, 0, 0, 0)
-<<<<<<< HEAD
     end = datetime.datetime(2018, 12, 21, 0, 0, 0)
-=======
-    end = datetime.datetime(2018, 12, 31, 23, 59, 59)
-    date_list = []
->>>>>>> 17e8deae32101cedcd7d848382d3a4ac4b6f1b52
     sum_rest_list = []
     print(os.getcwd())
     time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(20158, start, end) #2次元リスト (1日分 * 日数分)
@@ -64,8 +62,8 @@ if __name__ == '__main__':
             print(df['AccumulatedDis'])
             
             # --- 分析 ---
-            filename1 = "behavior_classification/bst/model.pickle"
-            filename2 = "behavior_classification/bst/model2.pickle"
+            filename1 = "behavior_classification/models/bst/model.pickle"
+            filename2 = "behavior_classification/models/bst/model2.pickle"
         
             labels = []
             probs = []
@@ -80,22 +78,10 @@ if __name__ == '__main__':
             print(result1)
             print(result2)	
             for a, b, c, d in zip(result1, result2, prob1, prob2):
-<<<<<<< HEAD
                 if (c.max() >= 0.7 and a == 1):
                     labels.append(a)
                 else:
                     labels.append(0)
-=======
-                if (c[0] >= 0.7):
-                    labels.append(a)
-                else:
-                    labels.append(0)
-                if (d[0] >= 0.7):
-                    labels.append(b)
-                else:
-                    labels.append(0)
-
->>>>>>> 17e8deae32101cedcd7d848382d3a4ac4b6f1b52
 
             # --- 復元 ---
             zipped_t_list = regex.str_to_datetime(df['Time'].tolist())

@@ -10,13 +10,16 @@ from sklearn import tree # 可視化用
 import pydotplus as pdp # 可視化用
 
 # 自作モジュール
+os.chdir('../') # カレントディレクトリを一階層上へ
+print(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import functions.evaluation_of_classifier as evaluation
 
 
 if __name__ == '__main__':
     usecols = [1,2,3,4,5,6,7,9,12,13]
     names = ('RCategory','WCategory', 'RTime', 'WTime', 'AccumulatedDis', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2')
-    filename = os.path.abspath('./') + "/training_data/training_data.csv"
+    filename = "./training_data/training_data.csv"
     data_set = pd.read_csv(filename, sep = ",", header = None, usecols = usecols, names=names)
     data_set = data_set.sample(frac=1).reset_index(drop=True) # データをシャッフル
     train_dataset, test_dataset = data_set[:int(0.8 * len(data_set))], data_set[int(0.8 * len(data_set)):] # 訓練データとテストデータに分割
@@ -27,19 +30,19 @@ if __name__ == '__main__':
     model1 = GradientBoostingClassifier(n_estimators=50, learning_rate=1.0, max_depth=1, random_state=777) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
     model1 = evaluation.learn(model1, train_dataset1, "Target1")
     evaluation1 = evaluation.evaluate(model1, test_dataset1, "Target1")
-    evaluation.output_csv("./bst/validation_r.csv", model1, test_dataset1, "Target1", ["REST_Proba", "GRAZE_Proba"])
+    evaluation.output_csv("./models/bst/validation_r.csv", model1, test_dataset1, "Target1", ["REST_Proba", "GRAZE_Proba"])
 
     model2 = GradientBoostingClassifier(n_estimators=50, learning_rate=1.0, max_depth=1, random_state=777) # seedの設定。seedを設定しないとモデルが毎回変わるので注意
     model2 = evaluation.learn(model2, train_dataset2, "Target2")
     evaluation2 = evaluation.evaluate(model2, test_dataset2, "Target2")
-    evaluation.output_csv("./bst/validation_a.csv", model2, test_dataset2, "Target2", ["REST_Proba", "GRAZE_Proba", "WALK_Proba"])
+    evaluation.output_csv("./models/bst/validation_a.csv", model2, test_dataset2, "Target2", ["REST_Proba", "GRAZE_Proba", "WALK_Proba"])
 
     print(evaluation1)
     print(evaluation2)
 
     # モデルを保存する
-    filename1 = 'bst/model.pickle'
+    filename1 = './models/bst/model.pickle'
     pickle.dump(model1, open(filename1, 'wb'))
-    filename2 = 'bst/model2.pickle'
+    filename2 = './models/bst/model2.pickle'
     pickle.dump(model2, open(filename2, 'wb'))
 

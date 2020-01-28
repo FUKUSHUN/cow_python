@@ -1,0 +1,2 @@
+一階層上のディレクトリ（behavior_classification/）で動作
+使用しなくなったので整理のために移動

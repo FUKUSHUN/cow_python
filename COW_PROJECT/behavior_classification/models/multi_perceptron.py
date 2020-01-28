@@ -7,7 +7,11 @@ import numpy as np
 import pandas as pd
 import pickle
 
-filename = "training_data/training_data.csv"
+os.chdir('../') # カレントディレクトリを一階層上へ
+print(os.getcwd())
+sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
+
+filename = "./training_data/training_data.csv"
 data_set = pd.read_csv(filename, sep = ",", header = None, usecols = [2,3,5,6,8,14,15], names=('RTime', 'WTime', 'Velocity', 'MVelocity', 'Distance', 'Target1', 'Target2'))
 train_data_set1 = data_set.drop("Target2", axis = 1)
 train_data_set2 = data_set.drop("Target1", axis = 1)
@@ -90,7 +94,7 @@ print(loss_and_metrics2)
 
 
 # モデルを保存する
-filename1 = 'mp/model.pickle'
+filename1 = './models/mp/model.pickle'
 pickle.dump(model, open(filename1, 'wb'))
-filename2 = 'mp/model2.pickle'
+filename2 = './mp/model2.pickle'
 pickle.dump(model2, open(filename2, 'wb'))
