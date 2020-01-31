@@ -80,12 +80,11 @@ def output_csv(filepath, model, test_dataset, target_labelname, classified_targe
 def output_roc(filepath, model):
     """ ROC曲線を出力する
     Parameter
-        model   : 検証対象のモデル (scikit-learn)
-    """
+        model   : 検証対象のモデル (scikit-learn) """
     print(sys._getframe().f_code.co_name, "実行中")
     print("分類器のROC曲線を出力します---")
 
-
+    # to do
 
     print("---" + filepath + "への出力が終了しました")
     print(sys._getframe().f_code.co_name, "正常終了\n")
@@ -94,6 +93,5 @@ def output_roc(filepath, model):
 def calculate_auc(model):
     """ AUCを計算する
     Parameter
-        model   : 検証対象のモデル (scikit-learn)
-    """
+        model   : 検証対象のモデル (scikit-learn) """
     print("hogehoge")

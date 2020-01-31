@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from scipy import stats # カテゴリ分布から乱数を生成, ウィシャート分布から乱数を生成
+import sys
 import pdb # デバッグ用
 
 """ ポアソン混合モデルを仮定したギブスサンプリングによるクラスタリングを行うクラス
@@ -142,6 +143,12 @@ class GaussianMixedModel:
     _maxiter = 100 # 最大反復回数
 
     def __init__(self, cov_matrixes, mu_vectors, pi_vector, alpha_vector, num):
+        """ Parameter
+                cov_matrixes    : list[ndarray]
+                mu_vectors      : list[ndarray]
+                pi_vector       : ndarray (K次元ベクトル)
+                alpha_vector    : ndarray (K次元ベクトル)
+                num             : scalar """
         self.cov_matrixes = cov_matrixes
         self.mu_vectors = mu_vectors
         self.pi_vector = pi_vector
@@ -169,7 +176,7 @@ class GaussianMixedModel:
         for i in range(self._maxiter):
             print(i+1, "回目のサンプリング")
             self._sample_s(X, S, eta, N, K, D)
-            self._sample_gaussian_parameters(X, S, m_list, beta_list, nd_list, W_list, N, K)
+            self._sample_gaussian_parameters(X, S, m_list, beta_list, nd_list, W_list, N, K, D)
             self._sample_pi(S, N, K)
         print("mu: ", self.mu_vectors)
         print("cov: ", self.cov_matrixes)
@@ -209,10 +216,9 @@ class GaussianMixedModel:
             custm = stats.rv_discrete(name='custm', values=(xk, eta[:,n]))
             rnd = custm.rvs(size=1)
             S[:,n] = np.array([1 if (k == rnd[0]) else 0 for k in range(K)])
-            # pdb.set_trace()
         return
     
-    def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K):
+    def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K, D):
         """ ガウス分布のパラメータΛ_k, μ_kをサンプルする
             Parameter
                 X   : D*N行列   入力データ
@@ -222,12 +228,12 @@ class GaussianMixedModel:
                 K   : クラスタ数 """
         for k in range(K):
             sum_s = 0.0
-            sum_sx = np.zeros((2,1))
-            sum_sxx = np.zeros((2,2))
+            sum_sx = np.zeros((D,1))
+            sum_sxx = np.zeros((D,D))
             for n in range(N):
                 sum_s += S[k, n]
-                sum_sx += np.dot(S[k, n], X[:,n:n+1])
-                sum_sxx += np.dot(S[k, n], np.dot(X[:,n:n+1], X[:,n:n+1].T))
+                sum_sx += S[k, n] * X[:,n:n+1]
+                sum_sxx += S[k, n] * np.dot(X[:,n:n+1], X[:,n:n+1].T)
             # パラメータ更新，この順番に更新するのが正しい? 
             beta_list[k] = sum_s + self._beta
             m_list[k] = (sum_sx + np.dot(self._beta, self._m_vector)) / beta_list[k]
@@ -283,7 +289,6 @@ class GaussianMixedModel:
                 equ3 = -1 * (nd + D) * math.log(1 + 1/nd * np.dot((new_X[:,m:m+1] - mu).T, np.dot(lam, (new_X[:,m:m+1] - mu))))
                 prob[k,m] = alpha * math.exp(equ1 + equ2 + equ3)
         return prob
-
 
     def get_gaussian_parameters(self):
         return self.mu_vectors, self.cov_matrixes

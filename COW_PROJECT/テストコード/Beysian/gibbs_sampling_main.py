@@ -99,7 +99,7 @@ def gaussian_mixed_model_test():
 
     # ギブスサンプリングによるクラスタリング
     gaussian_model = mixed_model.GaussianMixedModel(cov_matrixes, mu_vectors, pi_vector, alpha_vector, max_iterater)
-    result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1.0, 0], [0, 1.0]]))
+    result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1, 0], [0, 1]]))
 
     # 新たな入力に対する確率を推定
     new_X = np.arange(1,101, 2)

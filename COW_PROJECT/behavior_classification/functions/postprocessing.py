@@ -4,6 +4,7 @@
 """
 
 import sys
+import numpy as np
 
 def make_labels(results):
 	""" 分類結果のリストを時間のリストに合う形に整形する
@@ -49,6 +50,20 @@ def decompress(t_list, zipped_t_list, zipped_l_list):
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return new_t_list, l_list
 
+def process_result(S):
+	""" Sの結果からk番目のクラスタに所属するデータをkとラベル付けしデータを1次元化する
+		Parameter
+			S	: K*N行列の形で1ofK表現で書かれている
+		Return
+			new_S	: ndarray: N次元ベクトル """
+	K = len(S) # クラスタ数
+	N = len(S.T) # データ数
+	new_S = np.zeros(N)
+	for n in range(N):
+		for k in K:
+			if (S[k, n] == 1):
+				new_S[n] = k
+	return new_S
 
 def make_new_list(old_t_list, new_t_list, something):
 	""" 古い時間のリストのうち，新しい時間のリストに含まれている部分のみを切り取る

@@ -169,7 +169,7 @@ class GaussianMixedModel:
         for i in range(self._maxiter):
             print(i+1, "回目のサンプリング")
             self._sample_s(X, S, eta, N, K, D)
-            self._sample_gaussian_parameters(X, S, m_list, beta_list, nd_list, W_list, N, K)
+            self._sample_gaussian_parameters(X, S, m_list, beta_list, nd_list, W_list, N, K, D)
             self._sample_pi(S, N, K)
         print("mu: ", self.mu_vectors)
         print("cov: ", self.cov_matrixes)
@@ -212,7 +212,7 @@ class GaussianMixedModel:
             # pdb.set_trace()
         return
     
-    def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K):
+    def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K, D):
         """ ガウス分布のパラメータΛ_k, μ_kをサンプルする
             Parameter
                 X   : D*N行列   入力データ
@@ -222,8 +222,8 @@ class GaussianMixedModel:
                 K   : クラスタ数 """
         for k in range(K):
             sum_s = 0.0
-            sum_sx = np.zeros((2,1))
-            sum_sxx = np.zeros((2,2))
+            sum_sx = np.zeros((D,1))
+            sum_sxx = np.zeros((D,D))
             for n in range(N):
                 sum_s += S[k, n]
                 sum_sx += np.dot(S[k, n], X[:,n:n+1])

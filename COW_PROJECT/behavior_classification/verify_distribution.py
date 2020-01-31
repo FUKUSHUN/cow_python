@@ -24,10 +24,10 @@ import behavior_classification.functions.postprocessing as postprocessing
 import behavior_classification.functions.output_features as output_features
 
 #自作クラス
-import behavior_classification.myClass.gaussian_distribution as my_gauss
 import behavior_classification.myClass.feature_extraction as feature_extraction
 import behavior_classification.myClass.plotting as my_plot
 import behavior_classification.myClass.evaluation as evaluation
+import behavior_classification.models.beysian.single_model as my_gauss
 
 if __name__ == '__main__':
 	# --- 変数定義 ---
