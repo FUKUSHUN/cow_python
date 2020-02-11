@@ -13,32 +13,28 @@ class GpsNmeaDataList:
 	
 	def __init__(self, date:datetime, cow_id):
 		self.gps_list = []
-		self.read_from_database(date, cow_id, False)
+		self.read_from_database(date, cow_id, True)
 		
-	#gpsのリストを取得する
 	def get_gps_list(self):
+		""" gpsのリストを取得する """
 		return self.gps_list
 		
-	#gpsのリストのサブリストを取得する (時間順に並んでいることが想定されている)
-	"""
-	return------
-		list	: gpsのデータリスト (このクラスではないので注意)
-	"""
 	def get_sub_list(self, start:datetime, end:datetime):
+		""" gpsのリストのサブリストを取得する (時間順に並んでいることが想定されている)
+			return------
+				list	: gpsのデータリスト (このクラスではないので注意) """
 		sublist = []
 		for g in self.gps_list:
-			if end < g.get_datetime():
+			if (end < g.get_datetime()):
 				break
 			elif start <= g.get_datetime() and g.get_datetime() < end:
 				sublist.append(g)
 		return sublist
 		
-	#最初にデータベースからリストを作成する (1日ごと)
-	"""
-	parameter------
-		linear_flag	: 線形補間するかどうか
-	"""
 	def read_from_database(self, date:datetime, cow_id:int, linear_flag):
+		""" 最初にデータベースからリストを作成する (1日ごと)
+			parameter------
+				linear_flag	: 線形補間するかどうか """
 		is_exist = True
 		start = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
 		end = start + datetime.timedelta(days = 1)
@@ -50,18 +46,19 @@ class GpsNmeaDataList:
 			itr = c.execute(sql) #SQL文の実行
 			g_before = None
 			for row in itr:
-				dt = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S")
-				g = gps.GpsNmeaData(dt, row[1], row[2], row[3])
+				dt = datetime.datetime.strptime(row[0], "%Y/%m/%d %H:%M:%S") + datetime.timedelta(hours=9)
+				vel = float(row[3]) * 1852 / 3600 # 単位を[m/s]に変換
+				g = gps.GpsNmeaData(dt, row[1], row[2], vel)
 				if g_before is not None:
 					#速さが閾値self._error_threshold以下の時は前回の場所を踏襲
-					if (float(row[3]) * 1852 / 3600) < self._error_threshold:
+					if (vel < self._error_threshold):
 						g_list = self.__normal_interpolation(g_before, g)
 						for g_i in g_list:
 							self.gps_list.append(g_i)
 						lat, lon, _ = g_before.get_gps_info(g_before.get_datetime())
-						g = gps.GpsNmeaData(dt, lat, lon, row[3])
+						g = gps.GpsNmeaData(dt, lat, lon, vel)
 					#普通の線形補間
-					elif linear_flag:
+					elif (linear_flag):
 						g_list = self.__linear_interpolation(g_before, g)
 						for g_i in g_list:
 							self.gps_list.append(g_i)
@@ -82,8 +79,8 @@ class GpsNmeaDataList:
 		else:
 			return False
 		
-	#1s間隔のデータに直すために線形補間を行う (緯度・経度の線形補間であることを留意)
 	def __linear_interpolation(self, start:gps.GpsNmeaData, end:gps.GpsNmeaData):
+		""" 1s間隔のデータに直すために線形補間を行う (緯度・経度の線形補間であることを留意) """
 		dt_s = start.get_datetime()
 		dt_e = end.get_datetime()
 		interval = int((dt_e - dt_s).total_seconds()) #秒単位で時間の差分をとる
@@ -103,8 +100,8 @@ class GpsNmeaDataList:
 			interpolation_list.append(g)
 		return interpolation_list #startはこの補間リストに含まれない (前回の補間時に含まれるため重複を避けたい...)
 	
-	#1s間隔のデータに直すために間をstartと同じ値で埋め合わせる (個体ごとの観測のズレをなくしたい)
 	def __normal_interpolation(self, start:gps.GpsNmeaData, end:gps.GpsNmeaData):
+		""" 1s間隔のデータに直すために間をstartと同じ値で埋め合わせる (個体ごとの観測のズレをなくしたい) """
 		dt_s = start.get_datetime()
 		dt_e = end.get_datetime()
 		interval = int((dt_e - dt_s).total_seconds()) #秒単位で時間の差分をとる
@@ -116,17 +113,11 @@ class GpsNmeaDataList:
 			interpolation_list.append(g)
 		return interpolation_list #startはこの補間リストに含まれない (前回の補間時に含まれるため重複を避けたい...)
 		
-	#yymmdd.dbの形式にする (dbのファイルネーム規則)
 	def __make_file_format(self, dt):
+		""" yymmdd.dbの形式にする (dbのファイルネーム規則) """
 		y = dt.year % 100 #20XXのXXの部分だけ取り出す
 		m = dt.month
 		d = dt.day
 		return str(y * 10000 + m * 100 + d)
 
-	
-	def modify_time_gap(self):
-		""" 時差を修正してデータを再登録する（自明的に行えるように関数化する） """
-		for g in self.gps_list:
-			time = g.get_datetime()
-			g.set_datetime(time + datetime.timedelta(hours=9))
 		

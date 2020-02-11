@@ -17,12 +17,8 @@ class Cow:
 		return self.cow_id
 	
 	def get_gps_list(self, start:datetime, end:datetime):
-		list = self.gps_list.get_sub_list(start, end)
-		return list
-
-	def modify_time_gap(self):
-		""" 時差補正 """
-		self.gps_list.modify_time_gap()
+		gps_list = self.gps_list.get_sub_list(start, end)
+		return gps_list
 		
 	#テスト用 (gps_listを返す)
 	def get_test_list(self):
