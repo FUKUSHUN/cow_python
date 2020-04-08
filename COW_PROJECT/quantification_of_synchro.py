@@ -115,7 +115,6 @@ if __name__ == '__main__':
 
         ### 5分ごとにコミュニティを分析する ###
         cows = Cowshed.Cowshed(the_day) # その日の牛の集合
-        cows.modify_time_gap() # 時差を補正
         dt = the_day + datetime.timedelta(hours=9) # その日の始まり
         while (dt < the_day + datetime.timedelta(hours=9) + datetime.timedelta(days=1)):
             time_num = int((dt.strftime("%H%M")))

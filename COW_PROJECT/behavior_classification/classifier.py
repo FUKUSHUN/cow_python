@@ -71,44 +71,46 @@ if __name__ == '__main__':
 	pi_vector_r = [0.4, 0.6]
 	alpha_vector_r = [1, 1]
 
-	cov_matrixes_w = [walk_dist.get_cov_matrix(), graze_dist_a.get_cov_matrix()]
-	mu_vectors_w = [walk_dist.get_mean_vector(), graze_dist_a.get_mean_vector()]
+	cov_matrixes_w = [graze_dist_a.get_cov_matrix(), walk_dist.get_cov_matrix()]
+	mu_vectors_w = [graze_dist_a.get_mean_vector(), walk_dist.get_mean_vector()]
 	pi_vector_w = [0.3, 0.7]
 	alpha_vector_w = [1, 1]
-	max_iterater = 100
+	max_iterater = 50
 
 	# テスト用の1日のデータを読み込み
-	time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(target_cow_id, start, end) #2次元リスト (1日分 * 日数分)
-	if (len(position_list[0]) != 0):
-		for (t_list, p_list, d_list, v_list, a_list) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
-			# --- 前処理 ---
-			t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
-			# --- 特徴抽出 ---
-			features = feature_extraction.FeatureExtraction(savefile, start, target_cow_id)
-			features.output_features()
-			# --- 仮説検証 ---
-			df = pd.read_csv(savefile, sep = ",", header = 0, usecols = [0,3,4,5,6,9,10,11,12], names=('Time', 'RTime', 'WTime', 'AccumulatedDis', 'VelocityAve', 'RestVelocityAve', 'RestVelocityDiv', 'WalkVelocityAve', 'WalkVelocityDiv')) # csv読み込み
-			X_rest = df[rest_names].values.T
-			X_walk = df[walk_names].values.T
-			# ギブスサンプリングによるクラスタリング
-			gaussian_model_rest = mixed_model.GaussianMixedModel(cov_matrixes_r, mu_vectors_r, pi_vector_r, alpha_vector_r, max_iterater)
-			rest_result = gaussian_model_rest.gibbs_sample(X_rest, np.array([[0, 0, 0, 0, 0]]).T, 1, 6, np.eye(5))
-
-			gaussian_model_walk = mixed_model.GaussianMixedModel(cov_matrixes_w, mu_vectors_w, pi_vector_w, alpha_vector_w, max_iterater)
-			walk_result = gaussian_model_walk.gibbs_sample(X_walk, np.array([[0, 0, 0, 0, 0]]).T, 1, 6, np.eye(5))
-
-			rest_result = postprocessing.process_result(rest_result)
-			walk_result = postprocessing.process_result(walk_result)
-			print(rest_result)
-			print(walk_result)
-			
-			"""
-			# --- 復元 ---
-			zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
-			new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
-			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
-			pred_plot = my_plot.PlotUtility()
-			pred_plot.scatter_time_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
+	dt = start
+	t_list, p_list, d_list, v_list, a_list = loading.load_gps(target_cow_id, dt) #2次元リスト (1日分 * 日数分)
+	if (len(p_list) != 0):
+		# --- 前処理 ---
+		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #牛舎内にいる時間を除く
+		# --- 特徴抽出 ---
+		features = feature_extraction.FeatureExtraction(savefile, dt, target_cow_id)
+		features.output_features()
+		# --- 仮説検証 ---
+		df = pd.read_csv(savefile, sep = ",", header = 0, usecols = [0,3,4,5,6,9,10,11,12], names=('Time', 'RTime', 'WTime', 'AccumulatedDis', 'VelocityAve', 'RestVelocityAve', 'RestVelocityDiv', 'WalkVelocityAve', 'WalkVelocityDiv')) # csv読み込み
+		X_rest = df[rest_names].values.T
+		X_walk = df[walk_names].values.T
+		# ギブスサンプリングによるクラスタリング
+		gaussian_model_rest = mixed_model.GaussianMixedModel(cov_matrixes_r, mu_vectors_r, pi_vector_r, alpha_vector_r, max_iterater)
+		rest_result = gaussian_model_rest.gibbs_sample(X_rest, np.array([[0, 0, 0, 0, 0]]).T, 1, 6, np.eye(5)) # 休息セグメントのクラスタリング
+		gaussian_model_walk = mixed_model.GaussianMixedModel(cov_matrixes_w, mu_vectors_w, pi_vector_w, alpha_vector_w, max_iterater)
+		walk_result = gaussian_model_walk.gibbs_sample(X_walk, np.array([[0, 0, 0, 0, 0]]).T, 1, 6, np.eye(5)) # 歩行セグメントのクラスタリング
+		rest_result = postprocessing.process_result(rest_result, 0)
+		walk_result = postprocessing.process_result(walk_result, 1)
+		df = pd.concat([df, pd.Series(data=rest_result, name='rest_prediction'), pd.Series(data=walk_result, name='walk_prediction')], axis=1)
+		df.to_csv("behavior_classification/prediction.csv")
+		
+		# --- 復元 ---
+		zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
+		labels = []
+		for r, w in zip(rest_result, walk_result):
+			labels.append(r)
+			labels.append(w)
+		new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
+		new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
+		pred_plot = my_plot.PlotUtility()
+		pred_plot.scatter_time_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
+	
 	
 	# こっちが正解の横臥リスト
 	correct_filename = "behavior_classification/validation_data/20181230_20158.csv"
@@ -118,11 +120,10 @@ if __name__ == '__main__':
 	
 	# 真偽，陰陽で評価を行う
 	pred_plot.show()
-	correct_plot.show()
+	#correct_plot.show()
 	answers = correct_df['Label'].tolist()[1:]
 	evaluater = evaluation.Evaluation(labels, answers)
 	ev_rest = evaluater.evaluate(1)
 	ev_walk = evaluater.evaluate(2)
 	print(ev_rest)
 	print(ev_walk)
-	"""

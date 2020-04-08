@@ -260,12 +260,9 @@ class FeatureExtraction:
             filename	: 保存するファイルの絶対パス
             date	: 日付	: datetime
             cow_id	: 牛の個体番号．この牛の特徴を出力する """	
-        start = self.date
-        end = self.date + datetime.timedelta(days=1)
-        time_list, position_list, distance_list, velocity_list, angle_list = loading.load_gps(self.cow_id, start, end) #2次元リスト (1日分 * 日数分)だが1日ずつの指定のため要素数は1
-        t_list, p_list, d_list, v_list, a_list = time_list[0], position_list[0], distance_list[0], velocity_list[0], angle_list[0]
+        t_list, p_list, d_list, v_list, a_list = loading.load_gps(self.cow_id, self.date) # 1日分のデータ
         # ---前処理---
-        t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+        #t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
         if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0): # データがない場合は飛ばす
             
             # 畳み込み

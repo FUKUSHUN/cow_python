@@ -13,7 +13,7 @@ class GpsNmeaDataList:
 	
 	def __init__(self, date:datetime, cow_id):
 		self.gps_list = []
-		self.read_from_database(date, cow_id, True)
+		self.read_from_database(date, cow_id, False)
 		
 	def get_gps_list(self):
 		""" gpsのリストを取得する """

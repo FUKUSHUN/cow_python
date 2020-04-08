@@ -68,9 +68,8 @@ if __name__ == '__main__':
 			# 軌跡描画
 			display = disp.Adjectory(True)
 			zipped_rest_list = output_features.extract_one_behavior(zipped_list, state = "resting") # 描画用に休息時間と重心だけのリストにする
-			display.plot_rest_place(zipped_rest_list) # 休息の場所の分布のプロット
 			zipped_walk_list = np.array(output_features.extract_one_behavior(zipped_list, state = "walking")) # 描画用に歩行時間と重心だけのリストにする
-			display.plot_moving_ad(zipped_walk_list[:,1:].tolist()) # 移動の軌跡をプロット
+			display.plot_places(zipped_walk_list[:,1:].tolist()) # 移動の軌跡をプロット
 			plt.show()
 			
 			# --- 分析 ---
