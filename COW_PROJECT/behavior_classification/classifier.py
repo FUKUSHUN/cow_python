@@ -8,9 +8,10 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from sklearn.externals import joblib
+#from sklearn.externals import joblib
+import sklearn.decomposition as skd # 主成分分析
 import pickle
-import pdb
+import pdb # デバッグ用
 
 # 自作メソッド
 os.chdir('../') # カレントディレクトリを一階層上へ
@@ -19,7 +20,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import behavior_classification.functions.loading as loading
 import behavior_classification.functions.preprocessing as preprocessing
 import behavior_classification.functions.plotting as plotting
-import behavior_classification.functions.analyzing as analyzing
 import behavior_classification.functions.regex as regex
 import behavior_classification.functions.postprocessing as postprocessing
 import behavior_classification.functions.output_features as output_features
@@ -31,25 +31,53 @@ import behavior_classification.myClass.evaluation as evaluation
 import behavior_classification.models.beysian.single_model as single_model
 import behavior_classification.models.beysian.mixed_model as mixed_model
 
+
 def get_prior_dist(segment_name, behavior_name, usecols, names):
 	""" 事前分布の設定のために教師データから知見を得る """
 	rest_dataset_file = "behavior_classification/training_data/rest_train_data.csv" # 休息の訓練データ
 	walk_dataset_file = "behavior_classification/training_data/walk_train_data.csv" # 歩行の訓練データ
 	graze_dataset_file = "behavior_classification/training_data/graze_train_data.csv" # 採食の訓練データ
 	# 教師データから分布を取得
-	if (behavior_name is "rest"):
+	if (behavior_name == "rest"):
 		rest_df = pd.read_csv(rest_dataset_file, sep = ",", header = 0, usecols = usecols, names=names) # csv読み込み
 		dist = single_model.MyGaussianDistribution(rest_df)
-	elif (behavior_name is "walk"):
+	elif (behavior_name == "walk"):
 		walk_df = pd.read_csv(walk_dataset_file, sep = ",", header = 0, usecols = usecols, names=names) # csv読み込み
 		dist = single_model.MyGaussianDistribution(walk_df)
 	else:
-		if (segment_name is "rest"):
+		if (segment_name == "rest"):
 			graze_df = pd.read_csv(graze_dataset_file, sep = ",", header = 0, usecols = usecols, names=names) # csv読み込み
-		elif (segment_name is "act"):
+		elif (segment_name == "act"):
 			graze_df = pd.read_csv(graze_dataset_file, sep = ",", header = 0, usecols = usecols, names=names) # csv読み込み
 		dist = single_model.MyGaussianDistribution(graze_df)
 	return dist
+
+def visualize_pc(X, y, model, filename="output.gif"):
+	""" 主成分を可視化し分布の形を得る """
+	# print("今から主成分分析を行います")
+	# pca = skd.PCA()
+	# transformed = pca.fit_transform(X.T)
+	# print("累積寄与率: ", pca.explained_variance_ratio_)
+	# print("主成分分析が終了しました")
+	# pl = my_plot.PlotUtility3D()
+	# pl.plot_scatter(X[0,:], X[1,:], X[2,:], c=y)
+	pl = my_plot.PlotUtility()
+	pl.scatter_plot(X[0,:], X[1,:], y)
+	# pl.save_fig(filename)
+	pl.show()
+
+	# 新たな入力に対する確率を推定
+	new_X = np.arange(0, 100, 2)
+	new_Y = np.arange(0, 1.00, 0.02)
+	grid_X, grid_Y = np.meshgrid(new_X, new_Y)
+	new_X = np.array([grid_X.ravel(), grid_Y.ravel()])
+	prob_matrix = model.predict(new_X)
+	plotter_prob = my_plot.PlotUtility3D()
+	prob1, prob2 = prob_matrix[0], prob_matrix[1]
+	plotter_prob.plot_surface(grid_X, grid_Y, prob1.reshape([50, 50]), c=1)
+	plotter_prob.plot_surface(grid_X, grid_Y, prob2.reshape([50, 50]), c=2)
+	pdb.set_trace()
+	return
 
 if __name__ == '__main__':
 	# --- 変数定義 ---
@@ -68,7 +96,7 @@ if __name__ == '__main__':
 	# 事前パラメータを用意
 	cov_matrixes_r = [rest_dist.get_cov_matrix(), graze_dist_r.get_cov_matrix()]
 	mu_vectors_r = [rest_dist.get_mean_vector(), graze_dist_r.get_mean_vector()]
-	pi_vector_r = [0.4, 0.6]
+	pi_vector_r = [0.3, 0.7]
 	alpha_vector_r = [1, 1]
 
 	cov_matrixes_w = [graze_dist_a.get_cov_matrix(), walk_dist.get_cov_matrix()]
@@ -99,6 +127,10 @@ if __name__ == '__main__':
 		walk_result = postprocessing.process_result(walk_result, 1)
 		df = pd.concat([df, pd.Series(data=rest_result, name='rest_prediction'), pd.Series(data=walk_result, name='walk_prediction')], axis=1)
 		df.to_csv("behavior_classification/prediction.csv")
+
+		# 主成分分析
+		#visualize_pc(X_rest, rest_result, gaussian_model_rest, "rest3D.gif")
+		#visualize_pc(X_walk, walk_result, gaussian_model_walk, "walk3D.gif")
 		
 		# --- 復元 ---
 		zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
@@ -120,7 +152,9 @@ if __name__ == '__main__':
 	
 	# 真偽，陰陽で評価を行う
 	pred_plot.show()
-	#correct_plot.show()
+	# pred_plot.save_fig("prediction.png")
+	correct_plot.show()
+	# correct_plot.save_fig("correct.png")
 	answers = correct_df['Label'].tolist()[1:]
 	evaluater = evaluation.Evaluation(labels, answers)
 	ev_rest = evaluater.evaluate(1)

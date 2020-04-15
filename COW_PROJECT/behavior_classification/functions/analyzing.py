@@ -14,7 +14,7 @@ def reduce_dim_from3_to2(x, y, z):
     print("今から主成分分析を行います")
     features = np.array([x, y, z]).T
     pca = skd.PCA()
-    pca.fit(features)
+    #pca.fit(features)
     transformed = pca.fit_transform(features)
     print("累積寄与率: ", pca.explained_variance_ratio_)
     print("主成分分析が終了しました")

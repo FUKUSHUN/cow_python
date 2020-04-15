@@ -42,7 +42,7 @@ class PlotUtility:
             x_list  : 横軸の値のリスト
             y_list  : 縦軸の値のリスト
             c_list  : 色分けのリスト """
-        color_list = [self.color_table[c] for c in c_list]
+        color_list = [self.color_table[int(c)] for c in c_list]
         x = np.array(x_list)
         y = np.array(y_list)
         c = np.array(color_list)

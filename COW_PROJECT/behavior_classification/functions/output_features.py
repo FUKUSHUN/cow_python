@@ -8,7 +8,6 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from sklearn.externals import joblib
 import pickle
 
 # 自作クラス

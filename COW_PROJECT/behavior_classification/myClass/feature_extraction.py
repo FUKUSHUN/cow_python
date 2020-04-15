@@ -262,7 +262,7 @@ class FeatureExtraction:
             cow_id	: 牛の個体番号．この牛の特徴を出力する """	
         t_list, p_list, d_list, v_list, a_list = loading.load_gps(self.cow_id, self.date) # 1日分のデータ
         # ---前処理---
-        #t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
+        t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #日本時間に直した上で牛舎内にいる時間を除く
         if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0): # データがない場合は飛ばす
             
             # 畳み込み
