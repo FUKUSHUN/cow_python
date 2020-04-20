@@ -209,13 +209,15 @@ class GaussianMixedModel:
                 mu[k] = np.array([self.mu_vectors[k]]).T
                 lam[k] = np.linalg.inv(self.cov_matrixes[k])
                 eta[k,n] = np.exp(-1/2 * (np.dot((X[:,n:n+1] - mu[k]).T, np.dot(lam[k], (X[:,n:n+1] - mu[k])))[0,0]) + 1/2 * np.log(np.linalg.det(lam[k])) + np.log(self.pi_vector[k]))
-            sum_eta_n = sum(eta[:,n])
-            for k in range(K):
-                eta[k,n] = eta[k,n] / sum_eta_n
+            eta[:,n] = list(p/sum(eta[:,n]) for p in eta[:,n])
             # snをサンプル
-            custm = stats.rv_discrete(name='custm', values=(xk, eta[:,n]))
+            try: # エラー回避の応急処置としてtry-exceptしている
+                custm = stats.rv_discrete(name='custm', values=(xk, eta[:,n]))
+            except ValueError:
+                custm = stats.rv_discrete(name='custm', values=(xk, (np.ones(K)/sum(np.ones(K))).tolist())) # 等確率のカテゴリ分布
             rnd = custm.rvs(size=1)
             S[:,n] = np.array([1 if (k == rnd[0]) else 0 for k in range(K)])
+                
         return
     
     def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K, D):
