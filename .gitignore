@@ -14,9 +14,10 @@ rf/
 svm/
 training_data/
 validation_data/
-for_web/*.csv
 build/
 approached_index/
 approached_value/
 test/
 graph/
+*.csv
+*.mp4
