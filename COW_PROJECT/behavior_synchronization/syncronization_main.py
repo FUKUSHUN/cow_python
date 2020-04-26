@@ -35,8 +35,8 @@ def write_values(filepath, dt, value_list):
 
 if __name__ == '__main__':
     delta_c = 5 # コミュニティの抽出間隔 [minutes]
-    start = datetime.datetime(2018, 12, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 12, 2, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 2, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     output_file = "./behavior_synchronization/test/test.csv"
     date = start
@@ -54,6 +54,7 @@ if __name__ == '__main__':
             community = synch.make_interaction_graph(t, delta_c)
             analyzer.append_community(community)
             t += datetime.timedelta(minutes=delta_c)
+            pdb.set_trace()
         # --- 1日分のコミュニティのリストを元に分析する ---
         analyzer.lookup_max_same_number()
         max_num = analyzer.get_same_num_dict() # 同一コミュニティ回数の最大値を取り出す
