@@ -23,8 +23,8 @@ def get_existing_cow_list(date:datetime, filepath):
     sys.exit()
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 12, 16, 0, 0, 0)
-    end = datetime.datetime(2018, 12, 31, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 11, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     date = start
     while (date < end):
@@ -33,3 +33,4 @@ if __name__ == '__main__':
             model = classifier.Classifier()
             model.classify(date, cow_id) # 行動分類結果をcsvファイルに出力する
         date += datetime.timedelta(days=1)
+ 

@@ -90,8 +90,8 @@ class Classifier:
 		return
 
 	def classify(self, date, target_cow_id):
-		features_file = "behavior_classification/training_data/features.csv"
-		output_file = "behavior_classification/test/" + date.strftime("%Y%m%d")
+		features_file = "./behavior_classification/training_data/features.csv"
+		output_file = "./behavior_information/" + date.strftime("%Y%m%d")
 		# 事前パラメータを用意
 		cov_matrixes_r = [self.rest_dist.get_cov_matrix(), self.graze_dist_r.get_cov_matrix()]
 		mu_vectors_r = [self.rest_dist.get_mean_vector(), self.graze_dist_r.get_mean_vector()]
@@ -138,6 +138,7 @@ class Classifier:
 			df.to_csv(output_file)
 			# pred_plot = my_plot.PlotUtility()
 			# pred_plot.scatter_time_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
+			# pred_plot.show()
 
 	def _confirm_dir(self, dir_path):
 		""" ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
