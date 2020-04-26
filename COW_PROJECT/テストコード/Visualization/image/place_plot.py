@@ -3,7 +3,7 @@ from PIL import Image, ImageDraw
 import matplotlib.pyplot as plt
 import numpy as np
 
-class Adjectory:
+class PlacePlotter:
     image:Image.Image
     __size = (633, 537) # (width, height)
     __top_left = (34.88328, 134.86187) # (latitude, longitude)
@@ -13,7 +13,7 @@ class Adjectory:
         """ Parameter
                 back	: bool  背景に衛星画像を表示するかどうか """
         if(back):
-            self.image = Image.open("./image/background.jpg")
+            self.image = Image.open("./テストコード/Visualization/image/background.jpg")
         else:
             self.image = Image.new('RGBA',self.__size,(255,255,255,255))
     
@@ -22,7 +22,7 @@ class Adjectory:
             Parameter
                 pos_list    : list  (lat, lon) の2要素の2次元
                 caption_list    : list  画像に表示するラベル (牛の個体番号など)
-                color_list      : list  塗りつぶしの色 """
+                color_list      : list  塗りつぶしの色のリスト """
         draw = ImageDraw.Draw(self.image) # 図形描画用オブジェクト
         for pos in pos_list:
             self.draw_circle(draw, 3, float(pos[0]), float(pos[1]), (0, 255, 0))

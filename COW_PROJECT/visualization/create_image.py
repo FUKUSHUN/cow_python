@@ -6,12 +6,11 @@ import pandas as pd
 import pdb
 
 # 自作クラス
-os.chdir('../../') # カレントディレクトリを./COW_PROJECT/へ
+os.chdir('../') # カレントディレクトリを./COW_PROJECT/へ
 print(os.getcwd())
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import visualization.place_plot as place_plot
-import position_information.position_loader as pos_loader
-import cows.cowshed as cowshed
+import position_information.synchronizer as position_synchronizer
 
 def get_existing_cow_list(date:datetime, filepath):
     """ 引数の日にちに第一放牧場にいた牛のリストを得る """
@@ -33,7 +32,7 @@ if __name__ == '__main__':
     date = start
     while (date < end):
         cow_id_list = get_existing_cow_list(date, cows_record_file)
-        synch = pos_loader.Synchronizer(date, cow_id_list) # 時間と牛のIDを元にした位置情報のマトリックスを作る
+        synch = position_synchronizer.Synchronizer(date, cow_id_list) # 時間と牛のIDを元にした位置情報のマトリックスを作る
         dt = date + datetime.timedelta(hours=12) # 正午12時を始まりにする
         end_dt = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌9時を終わりにする
         while (dt < end_dt):
