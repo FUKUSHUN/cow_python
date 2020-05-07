@@ -56,7 +56,7 @@ if __name__ == '__main__':
     date = start
     while (date < end):
         cows = cowshed.Cowshed(date) # その日の牛の集合
-        cow_df = cows.get_cow_list(date+datetime.timedelta(hours=9), date + datetime.timedelta(days=1)+datetime.timedelta(hours=9))
+        cow_df = cows.get_cow_list(date+datetime.timedelta(hours=12), date + datetime.timedelta(days=1)+datetime.timedelta(hours=9))
         cow_id_list = np.ravel(cow_df[0:1].values.tolist()) # データのある牛のIDを取得
         # 時間と牛のIDを元にした位置情報のマトリックスを作る (欠損に対応するため，短い間隔でつくっていく)
         for _, item in cow_df.iteritems():

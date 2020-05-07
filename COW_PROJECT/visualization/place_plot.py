@@ -30,11 +30,13 @@ class PlacePlotter:
                 pos_list    : list  (lat, lon) の2要素の2次元
                 caption_list    : list  画像に表示するラベル (牛の個体番号など)
                 color_list      : list  塗りつぶしの色のリスト """
+        colors = [(127, 0, 0), (0, 127, 0), (0, 0, 127), (127, 127, 0), (127, 0, 127), (0, 127, 127), (127, 127, 127), \
+            (255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
         for i, pos in enumerate(pos_list):
-            x, y = self._draw_circle(3, float(pos[0]), float(pos[1]), (0, 255, 0))
-            if (caption_list is not None):
-                cap = caption_list[i]
-                cv2.putText(self.image, str(cap), (x+10, y+10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, cv2.LINE_AA)
+            color = colors[color_list[i]%len(colors)] if color_list is not None else (255,255,255) # 色の指定があれば色を付けられる
+            x, y = self._draw_circle(3, float(pos[0]), float(pos[1]), color)
+            caption = str(caption_list[i]) if caption_list is not None else "" # キャプションの指定があればキャプションを付けられる
+            cv2.putText(self.image, caption, (x+10, y+10), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255,255,255), 1, cv2.LINE_AA)
         cv2.putText(self.image, label, (5, 540), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255,255,255), 1, cv2.LINE_AA)
         return
 
@@ -66,12 +68,14 @@ class PlotMaker:
     video_filename: str
     width: int
     height: int
+    color_list: list
 
-    def __init__(self):
+    def __init__(self, color_list=None):
         self.video_filename = "./visualization/movie/"
         size = cv2.imread("./visualization/image/background.jpg").shape
         self.height = size[0]
         self.width = size[1]
+        self.color_list = color_list
 
     def make_movie(self, df:pd.DataFrame):
         """ 動画を作成する """
@@ -107,7 +111,7 @@ class PlotMaker:
             pos = (data[0], data[1])
             caption_list.append(cow_id)
             pos_list.append(pos)
-        plotter.plot_places(pos_list, caption_list=caption_list, label=time.strftime("%Y/%m/%d %H:%M:%S"))
+        plotter.plot_places(pos_list, caption_list=caption_list, color_list=self.color_list, label=time.strftime("%Y/%m/%d %H:%M:%S"))
         image = plotter.get_image()
         return image
 

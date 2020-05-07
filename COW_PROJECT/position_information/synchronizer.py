@@ -10,7 +10,7 @@ import position_information.position_loader as position_loader
 class Synchronizer:
     date: datetime.datetime
     cow_id_list: list
-    cows_data: pd.DataFrame
+    cows_data: pd.DataFrame # (lat, lon, vel) 12:00 - 9:00まで1秒ずつ
     
     def __init__(self, date:datetime.datetime, cow_id_list:list):
         self.date = date
@@ -48,8 +48,12 @@ class Synchronizer:
             print("データを結合しました", cow_id)
         df = df.set_index('Time') # 時間をインデックスにする
         self.cows_data = df
+        return
 
     def extract_df(self, start:datetime.datetime, end:datetime.datetime, delta: int):
         """ 特定の時間のデータを抽出する """
         df2 = self.cows_data[(start <= self.cows_data.index) & (self.cows_data.index < end)] # 抽出するときは代わりの変数を用意すること
         return df2[::delta] # 等間隔で抽出する
+    
+    def get_cow_id_list(self):
+        return self.cow_id_list
