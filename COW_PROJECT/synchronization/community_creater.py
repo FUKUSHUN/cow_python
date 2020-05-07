@@ -1,69 +1,66 @@
 import os, sys
 import datetime
-import numpy as np
 import pandas as pd
-import networkx as nx # Louvain法
+import numpy as np
+import pdb
+import networkx as nx # ネットワークグラフ
 import community # Louvain法
 import matplotlib.pyplot as plt # ネットワークグラフ描画
-import pdb
 
+# 自作メソッド
+import cows.geography as geography
 # 自作クラス
-import behavior_information.behavior_loader as behavior_loader
+import behavior_information.synchronizer as behavior_synchronizer
+import position_information.synchronizer as position_synchronizer
+import visualization.place_plot as place_plot
 
-class Synchronizer:
+class CommunityCreater:
     date: datetime.datetime
     cow_id_list: list
     cow_id_combination_list: list # 2頭の牛の組み合わせ（ID）をリスト化して保持（何度も用いるためリスト化して保持しておく）
-    cow_behavior_dict: dict # IDをキーにして牛の行動のdfを保持
+    behavior_synch: behavior_synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
+    position_synch: position_synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
     score_dict: dict # 行動同期スコアを格納, cow_id_combination_listのインデックスをキーにする
 
     def __init__(self, date, cow_id_list):
         self.date = date
-        cow_id_list = self._confirm_csv(cow_id_list)
-        self.cow_id_list = cow_id_list
-        self._prepare()
+        self.behavior_synch = behavior_synchronizer.Synchronizer(date, cow_id_list)
+        self.position_synch = position_synchronizer.Synchronizer(date, cow_id_list)
+        self.cow_id_list = self._check_cow_id_list()
+        self._make_combination_list()
+        return
 
-    def _confirm_csv(self, cow_id_list):
-        """ 行動分類のファイルが存在しているか確認しなければIDのリストから削除する """
-        dir_path = "behavior_information/" + self.date.strftime("%Y%m%d/")
-        delete_list = []
-        for cow_id in cow_id_list:
-            filepath = dir_path + str(cow_id) + ".csv"
-            if (not os.path.isfile(filepath)):
-                cow_id_list.remove(cow_id)
-                delete_list.append(cow_id)
-        print("行動分類ファイルの存在しない牛のIDをリストから削除しました. 削除した牛のリスト: ", delete_list)
-        return cow_id_list
-    
-    def _prepare(self):
-        """ インタラクショングラフ作成のための準備を行う
-            1. 牛の行動分類データ（1日分）を全頭分作成する
-            2. 2頭の組み合わせについて数え上げる """
-        print("行動分類データを読み込んでいます...")
-        self.cow_behavior_dict = {} # 牛のIDでdfを管理
-        for cow_id in self.cow_id_list:
-            loader = behavior_loader.BehaviorLoader(cow_id, self.date)
-            df = loader.get_data()
-            self.cow_behavior_dict[cow_id] = df
+    def _check_cow_id_list(self):
+        cl1 = self.behavior_synch.get_cow_id_list()
+        cl2 = self.position_synch.get_cow_id_list()
+        return sorted(list(set(cl1) & set(cl2))) # 二つの牛のIDリストの重複を牛のリスト, 必ずソートする
 
+    def _make_combination_list(self):
+        """ 2頭の組み合わせについて数え上げる """
         self.cow_id_combination_list = [] # すでに調べた牛の組を格納
         for c_i in self.cow_id_list:
             for c_j in self.cow_id_list:
                 cow_combi = sorted([c_i, c_j])
                 if (c_i != c_j and not cow_combi in self.cow_id_combination_list):
                     self.cow_id_combination_list.append(cow_combi)
-        print("正常に終了しました!")
         return
 
-    def make_interaction_graph(self, start:datetime.datetime, interval:int):
-        """ インタラクショングラフを作成する """
+    def make_interaction_graph(self, start:datetime.datetime, interval:int, method="position"):
+        """ インタラクショングラフを作成する, methodは複数用意する予定 """
+        delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
         self.score_dict = {}
         end = start + datetime.timedelta(minutes=interval)
         # すべての牛の組み合わせに対してスコアを算出する
+        beh_df = self.behavior_synch.extract_df(start, end, delta)
+        pos_df = self.position_synch.extract_df(start, end, delta)
         for i, combi in enumerate(self.cow_id_combination_list):
             cow_id1 = int(combi[0])
             cow_id2 = int(combi[1])
-            score = self._calculate_score(cow_id1, cow_id2, start, end)
+            # インタラクションの決定法によって処理を分岐する
+            if (method == "behavior"):
+                score = self._calculate_behavior_synchronization(beh_df, cow_id1, cow_id2, start, end)
+            elif (method == "position"):
+                score = self._calculate_position_synchronization(pos_df, cow_id1, cow_id2, start, end)
             self.score_dict[i] = score
         # グラフのエッジを結ぶ閾値を決定する
         threshold = self._determine_boundary()
@@ -72,25 +69,32 @@ class Synchronizer:
         print("コミュニティを生成しました. ", start)
         print(communities)
         self._visualize_graph(g, communities, start) # グラフ描画
+        self._visualize_community(pos_df, communities)
         return communities
 
-    def _calculate_score(self, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime):
+    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime):
         """ 行動同期スコアを計算する """
-        delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
         score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
-        cow1_df = self._extract_df(self.cow_behavior_dict[str(cow_id1)], start, end, delta)
-        cow2_df = self._extract_df(self.cow_behavior_dict[str(cow_id2)], start, end, delta)
+        df2 = df[[str(cow_id1), str(cow_id2)]]
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
-        for i,j in zip(cow1_df['Behavior'], cow2_df['Behavior']):
-            score += score_matrix[i,j]
+        for _, row in df2.iterrows():
+            score += score_matrix[row[0][1],row[1][1]]
         return score
 
-    def _extract_df(self, df:pd.DataFrame, start:datetime.datetime, end:datetime.datetime, delta: int):
-        """ 特定の時間のデータを抽出する """
-        df2 = df[(start <= df["Time"]) & (df["Time"] < end)] # 抽出するときは代わりの変数を用意すること
-        return df2[::delta] # 等間隔で抽出する
-    
+    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime):
+        """ 空間同期スコアを計算する """
+        threshold = 10 # [m] この距離以内の時間を計測する
+        df2 = df[[str(cow_id1), str(cow_id2)]]
+        # --- 行動同期スコアの計算（論文参照） --- 
+        score = 0
+        for _, row in df2.iterrows():
+            lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
+            dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            if (dis <= threshold):
+                score += 1
+        return score
+
     def _determine_boundary(self):
         """ インタラクショングラフのエッジの有無を決定する境界線を決定する """
         scores = list(self.score_dict.values())
@@ -137,7 +141,7 @@ class Synchronizer:
 
     def _visualize_graph(self, g, communities:list, date:datetime.datetime):
         """ インタラクショングラフを描画する """
-        save_path = "./behavior_synchronization/graph/" + date.strftime("%Y%m%d/")
+        save_path = "./synchronization/graph/" + date.strftime("%Y%m%d/")
         num_nodes = len(g.nodes)
         node_colors = [(1,0,0), (0,1,0), (0,0,1), (1,1,0), (0,1,1), (1,0,1), (0,0,0), (0,0.5,0.5), (0.5,0,0.5),(0.5,0.5,0)]
         color_list = []
@@ -160,6 +164,16 @@ class Synchronizer:
         self._confirm_dir(save_path)
         plt.savefig(save_path + date.strftime("%H%M.jpg"))
         return
+
+    def _visualize_community(self, df, communities:list):
+        color_list = []
+        for cow_id in self.cow_id_list:
+            for i, com in enumerate(communities):
+                if (cow_id in com):
+                    color_list.append(i)
+                    break
+        maker = place_plot.PlotMaker(color_list=color_list)
+        maker.make_movie(df)
 
     def _confirm_dir(self, dir_path):
         """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """

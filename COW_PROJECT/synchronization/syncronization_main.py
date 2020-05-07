@@ -1,14 +1,15 @@
 import os, sys
 import csv
 import datetime
+import numpy as np
 import pdb
 
 #自作クラス
 os.chdir('../') # カレントディレクトリを一階層上へ
 print(os.getcwd())
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import behavior_synchronization.synchronizer as synchronizer
-import behavior_synchronization.community_analyzer as commnity_analyzer
+import synchronization.community_creater as community_creater
+import synchronization.community_analyzer as commnity_analyzer
 
 # 別ファイルでモジュール化
 def get_existing_cow_list(date:datetime, filepath):
@@ -22,43 +23,45 @@ def get_existing_cow_list(date:datetime, filepath):
     print("指定の日付の牛のリストが見つかりません", date.strftime("%Y/%m/%d"))
     sys.exit()
 
-def write_values(filepath, dt, value_list):
+def write_values(filepath, value_list):
     if (os.path.exists(filepath) != True):
         with open(filepath, "w", newline='') as f: # ファイルがなければ新規作成
             writer = csv.writer(f)
-            writer.writerow([dt.strftime("%Y-%m-%dT%H:%M:%S")] + value_list)
+            writer.writerows(value_list)
     else:
         with open(filepath, "a", newline='') as f:# ファイルが存在していれば上書き
             writer = csv.writer(f)
-            writer.writerow([dt.strftime("%Y-%m-%dT%H:%M:%S")] + value_list)
+            writer.writerows(value_list)
     return
 
 if __name__ == '__main__':
     delta_c = 5 # コミュニティの抽出間隔 [minutes]
-    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 2, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 23, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 24, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
-    output_file = "./behavior_synchronization/test/test.csv"
+    output_file = "./synchronization/test/"
     date = start
-    target_list = [20116,20192,20255,20264,20289,20295]
-    #write_values(output_file, start, target_list)
+    target_list = [20170,20295,20299]
+    # write_values(output_file, [[0]+target_list])
     while (date < end):
-        value_list = []
+        t_list = []
         cow_id_list = get_existing_cow_list(date, cows_record_file)
-        synch = synchronizer.Synchronizer(date, cow_id_list)
+        com_creater = community_creater.CommunityCreater(date, cow_id_list)
         analyzer = commnity_analyzer.CommunityAnalyzer(cow_id_list) # 牛のリストに更新があるため、必ずSynchronizerの後にする
         # --- 行動同期を計測する ---
-        t = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
+        t = date + datetime.timedelta(hours=9) # 正午12時を始まりとするが.......ときに9時始まりのときもある
+        t_start = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
-            community = synch.make_interaction_graph(t, delta_c)
+            t_list.append(t)
+            community = com_creater.make_interaction_graph(t, delta_c) if (t_start <= t) else [[]]
             analyzer.append_community(community)
             t += datetime.timedelta(minutes=delta_c)
-            pdb.set_trace()
         # --- 1日分のコミュニティのリストを元に分析する ---
-        analyzer.lookup_max_same_number()
-        max_num = analyzer.get_same_num_dict() # 同一コミュニティ回数の最大値を取り出す
+        analyzer.calculate_simpson()
+        score_dict = analyzer.get_score_dict()
+        # 結果を出力する牛のスコアのみを取り出す
         for cow_id in target_list:
-            value_list.append(max_num[str(cow_id)])
-        write_values(output_file, date, value_list)
+            value_list = list(score_dict[str(cow_id)])
+            write_values(output_file+str(cow_id)+".csv", np.array([t_list, value_list]).T.tolist())
         date += datetime.timedelta(days=1)
