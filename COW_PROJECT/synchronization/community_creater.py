@@ -10,16 +10,16 @@ import matplotlib.pyplot as plt # ネットワークグラフ描画
 # 自作メソッド
 import cows.geography as geography
 # 自作クラス
-import behavior_information.synchronizer as behavior_synchronizer
-import position_information.synchronizer as position_synchronizer
+import behavior_information.synchronizer as behavior_synchronizer # 行動同期
+import position_information.synchronizer as position_synchronizer # 空間同期
 import visualization.place_plot as place_plot
 
 class CommunityCreater:
     date: datetime.datetime
     cow_id_list: list
     cow_id_combination_list: list # 2頭の牛の組み合わせ（ID）をリスト化して保持（何度も用いるためリスト化して保持しておく）
-    behavior_synch: behavior_synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
-    position_synch: position_synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
+    behavior_synch: behavior_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
+    position_synch: position_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
     score_dict: dict # 行動同期スコアを格納, cow_id_combination_listのインデックスをキーにする
 
     def __init__(self, date, cow_id_list):
@@ -48,50 +48,65 @@ class CommunityCreater:
     def make_interaction_graph(self, start:datetime.datetime, interval:int, method="position"):
         """ インタラクショングラフを作成する, methodは複数用意する予定 """
         delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
+        epsilon = 30 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
+        dzeta = 10 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
         self.score_dict = {}
         end = start + datetime.timedelta(minutes=interval)
         # すべての牛の組み合わせに対してスコアを算出する
-        beh_df = self.behavior_synch.extract_df(start, end, delta)
-        pos_df = self.position_synch.extract_df(start, end, delta)
+        df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
         for i, combi in enumerate(self.cow_id_combination_list):
             cow_id1 = int(combi[0])
             cow_id2 = int(combi[1])
             # インタラクションの決定法によって処理を分岐する
             if (method == "behavior"):
-                score = self._calculate_behavior_synchronization(beh_df, cow_id1, cow_id2, start, end)
+                score = self._calculate_behavior_synchronization(df, cow_id1, cow_id2, start, end, epsilon=epsilon)
             elif (method == "position"):
-                score = self._calculate_position_synchronization(pos_df, cow_id1, cow_id2, start, end)
+                score = self._calculate_position_synchronization(df, cow_id1, cow_id2, start, end, dzeta=dzeta)
             self.score_dict[i] = score
         # グラフのエッジを結ぶ閾値を決定する
         threshold = self._determine_boundary()
         #重みなし無向グラフを作成する
         g, communities = self._make_undirected_graph(threshold)
         print("コミュニティを生成しました. ", start)
-        print(communities)
+        print(communities) 
         self._visualize_graph(g, communities, start) # グラフ描画
-        self._visualize_community(pos_df, communities)
+        pos_df = self.position_synch.extract_df(start, end, delta)
+        self._visualize_community(pos_df, communities) # 動画描画
         return communities
 
-    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime):
-        """ 行動同期スコアを計算する """
+    def _extract_and_merge_df(self, start, end, delta=5):
+        """ startからendまでの時間のデータをdeltaごとにスライスして抽出し，行動，空間の2つのデータを結合する(どちらも1秒ごとに成形し，インデックスがTimeになっている前提)
+            delta   : int. 単位は[s (個)]. この個数ごとに等間隔でデータをスライス """
+        beh_df = self.behavior_synch.extract_df(start, end, delta)
+        pos_df = self.position_synch.extract_df(start, end, delta)
+        merged_df = pd.concat([beh_df, pos_df], axis=1)
+        return merged_df
+
+    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime, epsilon=30):
+        """ 行動同期スコアを計算する
+            epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
         score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
-        df2 = df[[str(cow_id1), str(cow_id2)]]
+        df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
-            score += score_matrix[row[0][1],row[1][1]]
+            lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
+            dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            # 距離が閾値以内ならスコアを加算する
+            if (dis <= epsilon):
+                score += score_matrix[row[0][1],row[2][1]]
         return score
 
-    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime):
-        """ 空間同期スコアを計算する """
-        threshold = 10 # [m] この距離以内の時間を計測する
-        df2 = df[[str(cow_id1), str(cow_id2)]]
+    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime, dzeta=10):
+        """ 空間同期スコアを計算する 
+            dzeta   : int. 単位は [m]. この距離以内の時間を計測する """
+        df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
-            lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
+            lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
             dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
-            if (dis <= threshold):
+            if (dis <= dzeta):
                 score += 1
         return score
 

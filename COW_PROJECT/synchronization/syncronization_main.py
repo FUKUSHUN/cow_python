@@ -36,7 +36,7 @@ def write_values(filepath, value_list):
 
 if __name__ == '__main__':
     delta_c = 5 # コミュニティの抽出間隔 [minutes]
-    start = datetime.datetime(2018, 10, 23, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 20, 0, 0, 0)
     end = datetime.datetime(2018, 10, 24, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     output_file = "./synchronization/test/"
@@ -54,14 +54,23 @@ if __name__ == '__main__':
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
             t_list.append(t)
-            community = com_creater.make_interaction_graph(t, delta_c) if (t_start <= t) else [[]]
-            analyzer.append_community(community)
+            community = com_creater.make_interaction_graph(t, delta_c, method="behavior") if (t_start <= t) else [[]]
+            analyzer.append_community([t, community])
             t += datetime.timedelta(minutes=delta_c)
         # --- 1日分のコミュニティのリストを元に分析する ---
-        analyzer.calculate_simpson()
-        score_dict = analyzer.get_score_dict()
+        score_dict = analyzer.calculate_simpson(target_list)
+        change_point_dict = analyzer.detect_change_point(target_list)
         # 結果を出力する牛のスコアのみを取り出す
         for cow_id in target_list:
             value_list = list(score_dict[str(cow_id)])
-            write_values(output_file+str(cow_id)+".csv", np.array([t_list, value_list]).T.tolist())
+            change_point = list(change_point_dict[str(cow_id)])
+            ###
+            change_list = []
+            t_tmp = date + datetime.timedelta(hours=9)
+            while (t_tmp < t_end):
+                change_flag = 1 if t_tmp in change_point else 0
+                change_list.append(change_flag)
+                t_tmp += datetime.timedelta(minutes=delta_c)
+            ###
+            write_values(output_file+str(cow_id)+".csv", np.array([t_list, value_list, change_list]).T.tolist())
         date += datetime.timedelta(days=1)

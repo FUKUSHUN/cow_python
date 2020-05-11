@@ -78,7 +78,8 @@ class PlotMaker:
         self.color_list = color_list
 
     def make_movie(self, df:pd.DataFrame):
-        """ 動画を作成する """
+        """ 動画を作成する
+            df  : position_information.synchronizer.Synchoronizer.cows_dataの形式 """
         # 画像の系列の取得
         images = self._make_sequence_images(df)
         fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
