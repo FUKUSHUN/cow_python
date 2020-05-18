@@ -24,6 +24,8 @@ def get_existing_cow_list(date:datetime, filepath):
     sys.exit()
 
 if __name__ == '__main__':
+    """ make_movieのテストプログラム """
+
     delta = 5 # 見る間隔 [sec]
     start = datetime.datetime(2018, 10, 1, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
     end = datetime.datetime(2018, 10, 2, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
@@ -33,12 +35,14 @@ if __name__ == '__main__':
     while (date < end):
         cow_id_list = get_existing_cow_list(date, cows_record_file)
         synch = position_synchronizer.Synchronizer(date, cow_id_list) # 時間と牛のIDを元にした位置情報のマトリックスを作る
-        dt = date + datetime.timedelta(hours=12) # 正午12時を始まりにする
+        dt = date + datetime.timedelta(hours=13) # 正午12時を始まりにする
         end_dt = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌9時を終わりにする
         while (dt < end_dt):
             df = synch.extract_df(dt, dt+datetime.timedelta(minutes=5), delta)
             maker = place_plot.PlotMaker()
-            maker.make_movie(df)
+            maker.make_movie(df, disp_adj=True) # disp_adj: 軌跡を描くか
+            df2 = df[[str(20117), str(20192), str(20295)]]
+            maker.make_adjectory(df2)
             dt += datetime.timedelta(minutes=5)
             pdb.set_trace()
         date += datetime.timedelta(days=1) # 時間を進める

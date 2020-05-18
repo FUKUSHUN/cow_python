@@ -49,7 +49,7 @@ class CommunityCreater:
         """ インタラクショングラフを作成する, methodは複数用意する予定 """
         delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
         epsilon = 30 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
-        dzeta = 10 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
+        dzeta = 20 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
         self.score_dict = {}
         end = start + datetime.timedelta(minutes=interval)
         # すべての牛の組み合わせに対してスコアを算出する
@@ -181,14 +181,16 @@ class CommunityCreater:
         return
 
     def _visualize_community(self, df, communities:list):
+        caption_list = []
         color_list = []
         for cow_id in self.cow_id_list:
             for i, com in enumerate(communities):
                 if (cow_id in com):
+                    caption_list.append(str(cow_id) + ":" + str(i))
                     color_list.append(i)
                     break
-        maker = place_plot.PlotMaker(color_list=color_list)
-        maker.make_movie(df)
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
+        maker.make_movie(df, disp_adj=False)
 
     def _confirm_dir(self, dir_path):
         """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """

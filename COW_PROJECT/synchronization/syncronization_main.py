@@ -36,8 +36,8 @@ def write_values(filepath, value_list):
 
 if __name__ == '__main__':
     delta_c = 5 # コミュニティの抽出間隔 [minutes]
-    start = datetime.datetime(2018, 10, 20, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 24, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 21, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 22, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     output_file = "./synchronization/test/"
     date = start
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
             t_list.append(t)
-            community = com_creater.make_interaction_graph(t, delta_c, method="behavior") if (t_start <= t) else [[]]
+            community = com_creater.make_interaction_graph(t, delta_c, method="position") if (t_start <= t) else [[]]
             analyzer.append_community([t, community])
             t += datetime.timedelta(minutes=delta_c)
         # --- 1日分のコミュニティのリストを元に分析する ---
