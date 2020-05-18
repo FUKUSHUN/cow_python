@@ -19,7 +19,6 @@ import behavior_classification.functions.preprocessing as preprocessing
 import behavior_classification.functions.plotting as plotting
 import behavior_classification.functions.regex as regex
 import behavior_classification.functions.postprocessing as postprocessing
-import behavior_classification.functions.output_features as output_features
 
 #自作クラス
 import behavior_classification.myClass.feature_extraction as feature_extraction

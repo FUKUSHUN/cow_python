@@ -23,7 +23,6 @@ import behavior_classification.functions.plotting as plotting
 import behavior_classification.functions.analyzing as analyzing
 import behavior_classification.functions.regex as regex
 import behavior_classification.functions.postprocessing as postprocessing
-import image.adjectory_image as disp
 
 """ このコードではfunctions/output_features.pyの関数群をクラスとして管理することを目標に作成されました """
 class FeatureExtraction:

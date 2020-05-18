@@ -1,4 +1,5 @@
 import os, sys
+import datetime
 import pdb
 
 class CommunityAnalyzer:
@@ -47,17 +48,17 @@ class CommunityAnalyzer:
                     min_length = len(com) if (len(com) < min_length) else min_length
 
                 # 比較 -> フラグ
-                eta = max_length * 6 / 5
-                theta = min_length * 4 / 5
+                eta = max_length * 2
+                theta = min_length * 1 / 2
                 for i in range(1, min(tau, l)+1):
                     com = compared_communities[l-i] # リストの後ろtau個（リストがtau以下のとき全数）とcommunityを比較
-                    if (not(len(set(com) | set(community)) <= eta)):
+                    if (not(len(set(com) | set(community)) <= eta)): # not 演算をしているので注意
                         change_flag = True
                         break
-                    if (not(len(set(com) & set(community)) >= theta)):
+                    if (not(len(set(com) & set(community)) >= theta)): # not 演算をしているので注意
                         change_flag = True
                         break
-
+                
                 # フラグ判定
                 if (change_flag):
                     change_point_list.append(time) # --- 変化点の時間を追加 ---
