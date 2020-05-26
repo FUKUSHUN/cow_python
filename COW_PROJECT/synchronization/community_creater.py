@@ -45,15 +45,19 @@ class CommunityCreater:
                     self.cow_id_combination_list.append(cow_combi)
         return
 
-    def make_interaction_graph(self, start:datetime.datetime, interval:int, method="position"):
-        """ インタラクショングラフを作成する, methodは複数用意する予定 """
+    def create_community(self, start:datetime.datetime, interval:int, method="position", visualized_g=False, visualized_m=False, focusing_cow_id=None):
+        """ インタラクショングラフを作成する, methodは複数用意する予定
+            interval: int   : startから何分間とするか
+            method: str     : position or behavior, コミュニティ作成手法
+            visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
+            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する """
         delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
-        epsilon = 30 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
+        epsilon = 10 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
         dzeta = 20 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
         self.score_dict = {}
         end = start + datetime.timedelta(minutes=interval)
         # すべての牛の組み合わせに対してスコアを算出する
-        df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+        df, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
         for i, combi in enumerate(self.cow_id_combination_list):
             cow_id1 = int(combi[0])
             cow_id2 = int(combi[1])
@@ -69,9 +73,17 @@ class CommunityCreater:
         g, communities = self._make_undirected_graph(threshold)
         print("コミュニティを生成しました. ", start)
         print(communities) 
-        self._visualize_graph(g, communities, start) # グラフ描画
-        pos_df = self.position_synch.extract_df(start, end, delta)
-        self._visualize_community(pos_df, communities) # 動画描画
+        if (visualized_g):
+            self._visualize_graph(g, communities, start) # グラフ描画
+        if (visualized_m):
+            self._visualize_community(pos_df, communities) # 動画描画
+        if (focusing_cow_id is not None):
+            community = None
+            for com in communities:
+                if (str(focusing_cow_id) in com):
+                    community = com
+                    break
+            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
         return communities
 
     def _extract_and_merge_df(self, start, end, delta=5):
@@ -80,7 +92,7 @@ class CommunityCreater:
         beh_df = self.behavior_synch.extract_df(start, end, delta)
         pos_df = self.position_synch.extract_df(start, end, delta)
         merged_df = pd.concat([beh_df, pos_df], axis=1)
-        return merged_df
+        return merged_df, beh_df, pos_df
 
     def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime, epsilon=30):
         """ 行動同期スコアを計算する
@@ -192,6 +204,39 @@ class CommunityCreater:
         maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
         maker.make_movie(df, disp_adj=False)
 
+    def _visualize_adjectory(self, df, communities, focusing_cow_id=None):
+        """ 軌跡描画を行う
+            focusing_cow_id: str  Noneのときは全コミュニティを描画，指定ありの場合は当該コミュニティのみを描画 """
+        caption_list = []
+        color_list = []
+        if (focusing_cow_id is None):
+            for cow_id in self.cow_id_list:
+                for i, com in enumerate(communities):
+                    if (cow_id in com):
+                        caption_list.append("")
+                        color_list.append(i)
+                        break
+            maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
+            maker.make_adjectory(df)
+        else:
+            community = [] # focusing_cow_idが所属するコミュニティを格納する
+            for com in communities:
+                if (focusing_cow_id in com):
+                    community = com
+                    break
+            community = sorted(community)
+            for cow_id in community:
+                if (cow_id == focusing_cow_id):
+                    caption_list.append("") # キャプションを表示しない
+                    color_list.append(0)
+                else:
+                    caption_list.append("") # キャプションを表示しない
+                    color_list.append(1)
+            new_df = df[community] # communityを使ってdfから必要な要素を抽出
+            maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
+            maker.make_adjectory(new_df)
+        return
+
     def _confirm_dir(self, dir_path):
         """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
         if (os.path.isdir(dir_path)):
@@ -200,3 +245,11 @@ class CommunityCreater:
             os.makedirs(dir_path)
             print("ディレクトリを作成しました", dir_path)
             return
+
+    def get_behavior_synch(self):
+        """ behavior_synchはロードに時間がかかるので使いまわす """
+        return self.behavior_synch
+
+    def get_position_synch(self):
+        """ position_synchはロードに時間がかかるので使いまわす """
+        return self.position_synch

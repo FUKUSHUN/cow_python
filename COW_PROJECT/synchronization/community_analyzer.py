@@ -16,24 +16,27 @@ class CommunityAnalyzer:
         self.communities_list.append(element)
         return
 
-    def detect_change_point(self, target_list, tau=6):
+    def detect_change_point(self, target_list, tau=3, upsiron=5):
         """ コミュニティの変化点を検知する
+            target_list: 変化点検出をしたい牛の個体番号を格納したリスト
             tau : 過去何個と現在のコミュニティを比較するか
+            upsiron : 和集合をとる区画 (2分おきのコミュニティに対してupsiron=5なら10分おきのコミュニティに成形して変化点検知に用いられる)
             theta : 積集合の最小値
             eta : 和集合の最大値 """
         change_point_dict = {}
         for cow_id in target_list:
             theta, eta = 1.0, 1.0
-            time_list = []
-            community_list = []
+            tmp_time_list = []
+            tmp_community_list = []
             # --- cow_idの所属するコミュニティのみを取り出しリストを作る --- 
             for (t, communities) in self.communities_list:
-                time_list.append(t)
+                tmp_time_list.append(t)
                 com = []
                 for community in communities:
                     if (str(cow_id) in community):
                         com = community
-                community_list.append(com) # 空のリスト or cow_idの所属するコミュニティのリストを格納
+                tmp_community_list.append(com) # 空のリスト or cow_idの所属するコミュニティのリストを格納
+            time_list, community_list = self._integrate_section(tmp_time_list, tmp_community_list, upsiron)
             # --- 変化点検知を行う ---
             compared_communities = [] # 比較対象のコミュニティを格納したリスト
             change_point_list = [time_list[0]] # 変化点を格納[start_1, start_2, ..., start_n] の形のリスト
@@ -68,6 +71,25 @@ class CommunityAnalyzer:
             change_point_dict[str(cow_id)] = change_point_list
         return change_point_dict
 
+    def _integrate_section(self, time_list, community_list, upsiron):
+        """ 固定区画でコミュニティの部分和集合をとる. 返却地でそのリストを返し，フィールドは変更しない
+            time_list: list             : 時間のリスト
+            community_list: list(2D)    : 注目したい牛の所属するコミュニティに絞ったリスト
+            upsiron: int                : 区画幅 """
+        new_time_list, new_community_list = [], []
+        for i, (time, community) in enumerate(zip(time_list, community_list)):
+            if (i % upsiron == 0): # 区画の最初
+                start = time
+                union_set = set(community)
+            elif (i % upsiron < upsiron - 1):
+                union_set = union_set | set(community) # 和集合
+            else: # i % upsiron == upsiron - 1
+                union_set = union_set | set(community) # 和集合
+                # 新しいリストに統合した新区画を追加
+                new_time_list.append(start)
+                new_community_list.append(list(union_set))
+        return new_time_list, new_community_list
+        
     def calculate_simpson(self, target_list):
         """ 一日のコミュニティの遷移を追ってSimpsonスコアを算出する """
         score_dict = {} # スコアのディクショナリ、牛のIDがキーとなる

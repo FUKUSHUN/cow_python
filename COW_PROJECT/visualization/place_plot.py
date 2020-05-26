@@ -83,9 +83,9 @@ class PlotMaker:
     caption_list:list
     color_list: list
 
-    def __init__(self, caption_list=None, color_list=None):
-        self.video_filename = "./visualization/movie/"
-        self.image_filename = "./visualization/image/"
+    def __init__(self, caption_list=None, color_list=None, video_filename="", image_filename=""):
+        self.video_filename = "./visualization/movie/" + video_filename
+        self.image_filename = "./visualization/image/" + image_filename
         size = cv2.imread("./visualization/image/background.jpg").shape
         self.height = size[0]
         self.width = size[1]

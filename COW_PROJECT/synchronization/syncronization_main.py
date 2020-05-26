@@ -10,6 +10,7 @@ print(os.getcwd())
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import synchronization.community_creater as community_creater
 import synchronization.community_analyzer as commnity_analyzer
+import synchronization.interaction_analyzer as interaction_analyzer
 
 # 別ファイルでモジュール化
 def get_existing_cow_list(date:datetime, filepath):
@@ -35,14 +36,13 @@ def write_values(filepath, value_list):
     return
 
 if __name__ == '__main__':
-    delta_c = 5 # コミュニティの抽出間隔 [minutes]
+    delta_c = 2 # コミュニティの抽出間隔 [minutes]
     start = datetime.datetime(2018, 10, 21, 0, 0, 0)
     end = datetime.datetime(2018, 10, 22, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
-    output_file = "./synchronization/test/"
+    output_file = "./synchronization/output/"
     date = start
     target_list = [20170,20295,20299]
-    # write_values(output_file, [[0]+target_list])
     while (date < end):
         t_list = []
         cow_id_list = get_existing_cow_list(date, cows_record_file)
@@ -54,12 +54,14 @@ if __name__ == '__main__':
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
             t_list.append(t)
-            community = com_creater.make_interaction_graph(t, delta_c, method="position") if (t_start <= t) else [[]]
+            community = com_creater.create_community(t, delta_c, method="behavior", visualized_g=False, visualized_m=True) \
+                if (t_start <= t) else [[]]
             analyzer.append_community([t, community])
             t += datetime.timedelta(minutes=delta_c)
         # --- 1日分のコミュニティのリストを元に分析する ---
+        tau, upsiron = 3, 5
         score_dict = analyzer.calculate_simpson(target_list)
-        change_point_dict = analyzer.detect_change_point(target_list)
+        change_point_dict = analyzer.detect_change_point(target_list, tau=tau, upsiron=upsiron)
         # 結果を出力する牛のスコアのみを取り出す
         for cow_id in target_list:
             value_list = list(score_dict[str(cow_id)])
@@ -72,5 +74,18 @@ if __name__ == '__main__':
                 change_list.append(change_flag)
                 t_tmp += datetime.timedelta(minutes=delta_c)
             ###
-            write_values(output_file+str(cow_id)+".csv", np.array([t_list, value_list, change_list]).T.tolist())
+            # write_values(output_file+str(cow_id)+".csv", np.array([t_list, value_list, change_list]).T.tolist())
+            behavior_synch = com_creater.get_behavior_synch()
+            position_synch = com_creater.get_position_synch()
+            inte_analyzer = interaction_analyzer.InteractionAnalyzer(cow_id, behavior_synch, position_synch)
+            features_list = []
+            write_values(output_file+str(cow_id)+".csv", [["Time", "Time Length", "Mileage", "Proportion_R", "Proportion_G", "Proportion_W", "Community size", "Minimum dist cow", "Minimum dist"]])
+            for i, start_point in enumerate(change_point):
+                if (i != 0):
+                    end_point = change_point[i+1] if (i != len(change_point)-1) else t_end
+                    interval = int((end_point - start_point).total_seconds()/60)
+                    community = com_creater.create_community(start_point, interval, method="position", visualized_g=False, visualized_m=False, focusing_cow_id=str(cow_id))
+                    features = inte_analyzer.extract_feature(start_point, end_point, community)
+                    features_list.append([start_point] + features)
+            write_values(output_file+str(cow_id)+".csv", features_list)
         date += datetime.timedelta(days=1)

@@ -19,5 +19,7 @@ approached_index/
 approached_value/
 test/
 graph/
+output/
 *.csv
 *.mp4
+*.jpg
