@@ -13,21 +13,20 @@ import cows.geography as geography
 import behavior_information.synchronizer as behavior_synchronizer # 行動同期
 import position_information.synchronizer as position_synchronizer # 空間同期
 import visualization.place_plot as place_plot
+import synchronization.clustering.dbscan as dbscan
+import synchronization.clustering.louvain as louvain
 
 class CommunityCreater:
     date: datetime.datetime
     cow_id_list: list
-    cow_id_combination_list: list # 2頭の牛の組み合わせ（ID）をリスト化して保持（何度も用いるためリスト化して保持しておく）
     behavior_synch: behavior_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
     position_synch: position_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
-    score_dict: dict # 行動同期スコアを格納, cow_id_combination_listのインデックスをキーにする
 
     def __init__(self, date, cow_id_list):
         self.date = date
         self.behavior_synch = behavior_synchronizer.Synchronizer(date, cow_id_list)
         self.position_synch = position_synchronizer.Synchronizer(date, cow_id_list)
         self.cow_id_list = self._check_cow_id_list()
-        self._make_combination_list()
         return
 
     def _check_cow_id_list(self):
@@ -35,15 +34,6 @@ class CommunityCreater:
         cl2 = self.position_synch.get_cow_id_list()
         return sorted(list(set(cl1) & set(cl2))) # 二つの牛のIDリストの重複を牛のリスト, 必ずソートする
 
-    def _make_combination_list(self):
-        """ 2頭の組み合わせについて数え上げる """
-        self.cow_id_combination_list = [] # すでに調べた牛の組を格納
-        for c_i in self.cow_id_list:
-            for c_j in self.cow_id_list:
-                cow_combi = sorted([c_i, c_j])
-                if (c_i != c_j and not cow_combi in self.cow_id_combination_list):
-                    self.cow_id_combination_list.append(cow_combi)
-        return
 
     def create_community(self, start:datetime.datetime, interval:int, method="position", visualized_g=False, visualized_m=False, focusing_cow_id=None):
         """ インタラクショングラフを作成する, methodは複数用意する予定
@@ -52,29 +42,50 @@ class CommunityCreater:
             visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
             focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する """
         delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
-        epsilon = 10 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
-        dzeta = 20 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
-        self.score_dict = {}
+        epsilon = 12 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
+        dzeta = 10 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
+        score_list = []
         end = start + datetime.timedelta(minutes=interval)
         # すべての牛の組み合わせに対してスコアを算出する
+        K = len(self.cow_id_list)
+        W = np.zeros([K,K])
         df, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
-        for i, combi in enumerate(self.cow_id_combination_list):
-            cow_id1 = int(combi[0])
-            cow_id2 = int(combi[1])
-            # インタラクションの決定法によって処理を分岐する
-            if (method == "behavior"):
-                score = self._calculate_behavior_synchronization(df, cow_id1, cow_id2, start, end, epsilon=epsilon)
-            elif (method == "position"):
-                score = self._calculate_position_synchronization(df, cow_id1, cow_id2, start, end, dzeta=dzeta)
-            self.score_dict[i] = score
+        for i, cow_id1 in enumerate(self.cow_id_list):
+            for j, cow_id2 in enumerate(self.cow_id_list):
+                # インタラクションの決定法によって処理を分岐する
+                if (i < j):
+                    if (method == "behavior"):
+                        score = self._calculate_behavior_synchronization(df, cow_id1, cow_id2, epsilon=epsilon)
+                    elif (method == "position"):
+                        score = self._calculate_position_synchronization(df, cow_id1, cow_id2, dzeta=dzeta)
+                    elif (method == "distance"): # 重みと距離が反比例の関係にあるのでそのままではDBSCANにしか使えないことに注意
+                        score = self._calculate_average_distance(df, self.cow_id_list[i], self.cow_id_list[j])
+                    score_list.append(score)
+                    W[i,j] = score
+                    W[j,i] = score
+                elif (i == j):
+                    W[i,j] = 0
+                else:
+                    continue
         # グラフのエッジを結ぶ閾値を決定する
-        threshold = self._determine_boundary()
+        threshold = self._determine_boundary(score_list)
         #重みなし無向グラフを作成する
-        g, communities = self._make_undirected_graph(threshold)
+        X = np.zeros([K, K])
+        for i in range(K):
+            for j in range(i,K):
+                X[i,j] = 1 if threshold <= W[i,j] else 0
+                X[j,i] = 1 if threshold <= W[j,i] else 0
+        louvainer = louvain.CommunityLouvain()
+        communities = louvainer.create_community(self.cow_id_list, W)
+        # g = louvainer.create_graph(self.cow_id_list, X)
+        g = louvainer.create_weighted_graph(self.cow_id_list, W)
+        # eps, minPts = 10, 2
+        # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
+        # communities = dbscanner.create_community(W, self.cow_id_list)
         print("コミュニティを生成しました. ", start)
-        print(communities) 
+        print(communities)
         if (visualized_g):
-            self._visualize_graph(g, communities, start) # グラフ描画
+            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
         if (visualized_m):
             self._visualize_community(pos_df, communities) # 動画描画
         if (focusing_cow_id is not None):
@@ -94,10 +105,10 @@ class CommunityCreater:
         merged_df = pd.concat([beh_df, pos_df], axis=1)
         return merged_df, beh_df, pos_df
 
-    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime, epsilon=30):
+    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, epsilon=30):
         """ 行動同期スコアを計算する
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
-        score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
+        score_matrix = np.array([[1,0,0], [0,1,0], [0,0,9]])
         df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
@@ -109,7 +120,7 @@ class CommunityCreater:
                 score += score_matrix[row[0][1],row[2][1]]
         return score
 
-    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, start:datetime.datetime, end:datetime.datetime, dzeta=10):
+    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, dzeta=10):
         """ 空間同期スコアを計算する 
             dzeta   : int. 単位は [m]. この距離以内の時間を計測する """
         df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
@@ -122,10 +133,23 @@ class CommunityCreater:
                 score += 1
         return score
 
-    def _determine_boundary(self):
+    def _calculate_average_distance(self, df, cow_id1, cow_id2):
+        """ 距離の平均を算出する """
+        df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
+        # --- 行動同期スコアの計算（論文参照） --- 
+        count = 0
+        accumulated_distance = 0
+        for _, row in df2.iterrows():
+            lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
+            dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            # 距離を加算する
+            accumulated_distance += dis
+            count += 1
+        return accumulated_distance / count
+
+    def _determine_boundary(self, score_list):
         """ インタラクショングラフのエッジの有無を決定する境界線を決定する """
-        scores = list(self.score_dict.values())
-        X = sorted(scores)
+        X = sorted(score_list)
         X1, X2 = X[0:2], X[2:]
         min_d, min_i = None, 2
         # ソートした数値を小さい方から分岐していき重心間距離の2乗の総和が最小となる分岐点を (ほぼ) 全数探索する
@@ -145,28 +169,7 @@ class CommunityCreater:
         threshold = (X[min_i-1] + X[min_i]) / 2 # 分割点をエッジを結ぶ閾値とする
         return threshold
 
-    def _make_undirected_graph(self, threshold):
-        """ 重みなし無向グラフを作成する """
-        g = nx.Graph()
-        edges = []
-        # ノードメンバを登録
-        for cow_id in self.cow_id_list:
-            g.add_node(cow_id)
-        # エッジを追加
-        edges = [self.cow_id_combination_list[i] for i in range(len(self.cow_id_combination_list)) if threshold <= self.score_dict[i]]
-        g.add_edges_from(edges)
-        partition = community.best_partition(g)
-        return g, self._make_node_list(partition)
-
-    def _make_node_list(self, partition):
-        """ コミュニティごとに各牛の個体番号のリストを作成し，コミュニティのリストを返す  """
-        nodes_list = []
-        for com in set(partition.values()):
-            nodes = [nodes for nodes in partition.keys() if partition[nodes] == com]
-            nodes_list.append(nodes)
-        return nodes_list
-
-    def _visualize_graph(self, g, communities:list, date:datetime.datetime):
+    def _visualize_graph(self, g, communities:list, date:datetime.datetime, weighted=False):
         """ インタラクショングラフを描画する """
         save_path = "./synchronization/graph/" + date.strftime("%Y%m%d/")
         num_nodes = len(g.nodes)
@@ -187,12 +190,16 @@ class CommunityCreater:
         nx.draw_networkx_edges(g, pos, edge_color='y')
         nx.draw_networkx_nodes(g, pos, node_color=color_list, alpha=0.5) # alpha: 透明度の指定
         nx.draw_networkx_labels(g, pos, font_size=10) #ノード名を付加
+        if (weighted):
+            edge_labels = {(i, j): w['weight'] for i, j, w in g.edges(data=True)}
+            nx.draw_networkx_edge_labels(g,pos, edge_labels=edge_labels)
         plt.axis('off') #X軸Y軸を表示しない設定
         self._confirm_dir(save_path)
         plt.savefig(save_path + date.strftime("%H%M.jpg"))
         return
 
     def _visualize_community(self, df, communities:list):
+        """ 位置情報可視化動画を作成する """
         caption_list = []
         color_list = []
         for cow_id in self.cow_id_list:
@@ -203,6 +210,7 @@ class CommunityCreater:
                     break
         maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
         maker.make_movie(df, disp_adj=False)
+        return
 
     def _visualize_adjectory(self, df, communities, focusing_cow_id=None):
         """ 軌跡描画を行う

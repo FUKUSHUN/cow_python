@@ -2,6 +2,7 @@ import os, sys
 import csv
 import datetime
 import numpy as np
+import time
 import pdb
 
 #自作クラス
@@ -43,6 +44,7 @@ if __name__ == '__main__':
     output_file = "./synchronization/output/"
     date = start
     target_list = [20170,20295,20299]
+    s = time.time()
     while (date < end):
         t_list = []
         cow_id_list = get_existing_cow_list(date, cows_record_file)
@@ -58,6 +60,9 @@ if __name__ == '__main__':
                 if (t_start <= t) else [[]]
             analyzer.append_community([t, community])
             t += datetime.timedelta(minutes=delta_c)
+        e = time.time()
+        print("処理時間", (e-s)/60, "[min]")
+        pdb.set_trace()
         # --- 1日分のコミュニティのリストを元に分析する ---
         tau, upsiron = 3, 5
         score_dict = analyzer.calculate_simpson(target_list)
