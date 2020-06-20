@@ -9,19 +9,17 @@ class CommunityLouvain:
 
     def __init__(self):
         self.louvain = Louvain()
-    # def create_community(self, cow_id_list, cow_id_combination_list, score_dict, threshold):
-    #     """ 重みなし無向グラフを作成する """
-    #     self.graph = nx.Graph()
-    #     edges = []
-    #     # ノードメンバを登録
-    #     for cow_id in cow_id_list:
-    #         self.graph.add_node(cow_id)
-    #     # エッジを追加
-    #     edges = [cow_id_combination_list[i] for i in range(len(cow_id_combination_list)) if threshold <= score_dict[i]]
-    #     self.graph.add_edges_from(edges)
-    #     partition = community.best_partition(self.graph)
-    #     communities = self._make_nodes(partition)
-    #     return communities
+    
+    def exchange_undirected_graph(self, W, threshold):
+        """ 重みなし無向グラフを作成する """
+        K = len(W)
+        X = np.zeros([K, K])
+        for i in range(K):
+            for j in range(i,K):
+                if (j <= i):
+                    X[i,j] = 1 if threshold <= W[i,j] else 0
+                    X[j,i] = 1 if threshold <= W[j,i] else 0
+        return X
 
     def create_community(self, cow_id_list, X):
         """ Louvain法を用いたコミュニティを作る """
@@ -40,14 +38,6 @@ class CommunityLouvain:
         for c in new_cluster:
             node_list.append([cow_id_list[i] for i in c])
         return node_list
-
-    # def _make_nodes(self, partition):
-    #     """ コミュニティごとに各牛の個体番号のリストを作成し，コミュニティのリストを返す  """
-    #     nodes_list = []
-    #     for com in set(partition.values()):
-    #         nodes = [nodes for nodes in partition.keys() if partition[nodes] == com]
-    #         nodes_list.append(nodes)
-    #     return nodes_list
 
     def create_graph(self, cow_id_list, X):
         graph = nx.Graph()

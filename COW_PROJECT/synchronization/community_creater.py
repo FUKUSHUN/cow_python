@@ -67,17 +67,12 @@ class CommunityCreater:
                     W[i,j] = 0
                 else:
                     continue
-        # グラフのエッジを結ぶ閾値を決定する
-        threshold = self._determine_boundary(score_list)
-        #重みなし無向グラフを作成する
-        X = np.zeros([K, K])
-        for i in range(K):
-            for j in range(i,K):
-                X[i,j] = 1 if threshold <= W[i,j] else 0
-                X[j,i] = 1 if threshold <= W[j,i] else 0
+        # Louvain法を使用したグラフクラスタリング（W: 重み付き, X: 重みなし）
         louvainer = louvain.CommunityLouvain()
-        communities = louvainer.create_community(self.cow_id_list, W)
+        # threshold = self._determine_boundary(score_list) # グラフのエッジを結ぶ閾値を決定する
+        # X = louvainer.exchange__undirected_graph(W, threshold) #重みなし無向グラフを作成する
         # g = louvainer.create_graph(self.cow_id_list, X)
+        communities = louvainer.create_community(self.cow_id_list, W)
         g = louvainer.create_weighted_graph(self.cow_id_list, W)
         # eps, minPts = 10, 2
         # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
