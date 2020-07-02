@@ -1,14 +1,17 @@
 import os, sys
 import datetime
+import numpy as np
 import pdb
 
 class CommunityAnalyzer:
     cow_id_list:list
     communities_list:list # [time:datetime.datetime, community:list] のリスト
+    graph_list:list # [time:datetime.datetime, graph:ndarray] のリスト. cow_id_listの順に行列が構成されている
     
     def __init__(self, cow_id_list):
         self.cow_id_list = cow_id_list
         self.communities_list = []
+        self.graph_list = []
 
     def append_community(self, element):
         """ コミュニティを格納する
@@ -16,7 +19,12 @@ class CommunityAnalyzer:
         self.communities_list.append(element)
         return
 
-    def detect_change_point(self, target_list, tau=3, upsiron=5):
+    def append_graph(self, element):
+        """ インタラクショングラフを格納する
+            element : list  [datetime, graph:ndarray]の要素を追加する """
+        self.graph_list.append(element)
+
+    def detect_change_point(self, target_list, tau=5, upsiron=1):
         """ コミュニティの変化点を検知する
             target_list: 変化点検出をしたい牛の個体番号を格納したリスト
             tau : 過去何個と現在のコミュニティを比較するか
@@ -51,8 +59,8 @@ class CommunityAnalyzer:
                     min_length = len(com) if (len(com) < min_length) else min_length
 
                 # 比較 -> フラグ
-                eta = max_length * 2
-                theta = min_length * 1 / 2
+                eta = max_length * 4 / 3
+                theta = min_length * 2 / 3
                 for i in range(1, min(tau, l)+1):
                     com = compared_communities[l-i] # リストの後ろtau個（リストがtau以下のとき全数）とcommunityを比較
                     if (not(len(set(com) | set(community)) <= eta)): # not 演算をしているので注意
@@ -83,7 +91,7 @@ class CommunityAnalyzer:
                 union_set = set(community)
             elif (i % upsiron < upsiron - 1):
                 union_set = union_set | set(community) # 和集合
-            else: # i % upsiron == upsiron - 1
+            if (i % upsiron == upsiron - 1): # i % upsiron == upsiron - 1
                 union_set = union_set | set(community) # 和集合
                 # 新しいリストに統合した新区画を追加
                 new_time_list.append(start)
@@ -133,4 +141,64 @@ class CommunityAnalyzer:
                 if (cow_id1 in com and cow_id2 in com):
                     count += 1
         return count
-    
+
+    def calculate_average_graph_density(self, start, end, target_cow_id):
+        """ ある牛の所属するコミュニティのグラフ密度の平均を算出する """
+        density_list = []
+        for (time, graph) in self.graph_list:
+            if (start <= time and time < end):
+                com = self._get_particular_community(time, target_cow_id)
+                # targetの所属するコミュニティのメンバのみからなるグラフに成形する
+                index_list = [] # インタラクショングラフの何行目かのインデックス
+                for cow_id in com:
+                    index_list.append(self.cow_id_list.index(str(cow_id)))
+                index_list = sorted(index_list)
+                formed_graph = self._form_graph(graph, index_list)
+                # グラフの密度を算出する
+                density = self._calculate_graph_density(formed_graph)
+                density_list.append(density)
+            elif (end <= time):
+                break
+        return sum(density_list) / len(density_list)
+
+    def _get_particular_community(self, time, cow_id):
+        """ ある時間帯のある牛の所属するコミュニティを取得する """
+        for (t, coms) in self.communities_list:
+            if (t == time):
+                for com in coms:
+                    if (str(cow_id) in com):
+                        return com
+
+    def _form_graph(self, W, index_list):
+        """ 全体のグラフ（行列）からインデックス行（列）のみを取り出して成形する """
+        graph_rows = [W[index] for index in index_list]
+        formed_graph = np.stack(graph_rows, axis=0)
+        graph_columns = [formed_graph[:,index] for index in index_list]
+        formed_graph = np.stack(graph_columns, axis=1)
+        return formed_graph
+
+    def _calculate_graph_density(self, W):
+        """ グラフの密度を求める
+            W:  コミュニティメンバのみに成形後のインタラクショングラフ """
+        # 辺の数（重みが0より大きい）を数え上げる
+        K = len(W)
+        count = 0
+        for i in range(K):
+            for j in range(K):
+                if (i < j and 0 < W[i,j]):
+                    count += 1
+        # 完全グラフの時の辺の数で割り密度を算出する
+        density = count / (K * (K-1) / 2) if 1 < K else 0
+        return density
+
+    def get_community_union(self, start, end, cow_id):
+        """ ある牛のある時間帯のコミュニティメンバの和集合を求める """
+        union_set = set()
+        for (time, communities) in self.communities_list:
+            if (start <= time and time < end):
+                for community in communities:
+                    if (str(cow_id) in community):
+                        union_set = union_set | set(community) # 和集合
+            elif (end <= time):
+                break
+        return sorted(union_set)

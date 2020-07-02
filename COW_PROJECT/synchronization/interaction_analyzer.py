@@ -45,7 +45,7 @@ class InteractionAnalyzer:
         # 最も距離の近かった牛（平均）との距離
         minimum_dist_cow, minimum_dist = self._find_minimun_distance(pos_df, community)
         features = [time_interval, total_distance, behavior_ratio['rest'], behavior_ratio['graze'], behavior_ratio['walk'], community_size, minimum_dist_cow, minimum_dist]
-        self._visualize_adjectory(pos_df, [str(self.cow_id), str(minimum_dist_cow)])
+        # self._visualize_adjectory(pos_df, [str(self.cow_id), str(minimum_dist_cow)])
         return features
 
     def _extract_and_merge_df(self, start, end, delta=5):

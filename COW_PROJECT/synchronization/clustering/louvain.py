@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import networkx as nx # ネットワークグラフ
@@ -60,7 +61,7 @@ class CommunityLouvain:
             graph.add_node(cow_id1)
             for j, cow_id2 in enumerate(cow_id_list):
                 if (W[i,j] > 0):
-                    edges.append((cow_id1, cow_id2, W[i,j]))
+                    edges.append((cow_id1, cow_id2, math.floor(W[i,j] * 100) / 100))
         # エッジを追加
         graph.add_weighted_edges_from(edges)
         return graph

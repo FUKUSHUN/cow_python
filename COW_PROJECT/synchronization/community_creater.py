@@ -1,4 +1,5 @@
 import os, sys
+import math
 import datetime
 import pandas as pd
 import numpy as np
@@ -17,12 +18,14 @@ import synchronization.clustering.dbscan as dbscan
 import synchronization.clustering.louvain as louvain
 
 class CommunityCreater:
+    community_history:list # コミュニティ履歴（要素数はlen以下になる）
     date: datetime.datetime
     cow_id_list: list
     behavior_synch: behavior_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
     position_synch: position_synchronizer.Synchronizer # 自作クラス, pd.DataFrame形式のデータを保持
 
     def __init__(self, date, cow_id_list):
+        self.community_history = []
         self.date = date
         self.behavior_synch = behavior_synchronizer.Synchronizer(date, cow_id_list)
         self.position_synch = position_synchronizer.Synchronizer(date, cow_id_list)
@@ -35,21 +38,56 @@ class CommunityCreater:
         return sorted(list(set(cl1) & set(cl2))) # 二つの牛のIDリストの重複を牛のリスト, 必ずソートする
 
 
-    def create_community(self, start:datetime.datetime, interval:int, method="position", visualized_g=False, visualized_m=False, focusing_cow_id=None):
+    def create_community(self, start, end, W:np.array, visualized_g=False, visualized_m=False, focusing_cow_id=None, delta=5):
         """ インタラクショングラフを作成する, methodは複数用意する予定
-            interval: int   : startから何分間とするか
-            method: str     : position or behavior, コミュニティ作成手法
+            W:          np.array            : インタラクショングラフ（重み付きグラフの行列）
             visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
-            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する """
-        delta = 5 # データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
-        epsilon = 12 # 距離の閾値．単位はメートル（行動同期を見る際にも距離により明らかな誤認識を避ける）
-        dzeta = 10 # 距離の閾値. 単位はメートル（空間同期を見る際に基準となる閾値）
+            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する
+            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている) """
+        # --- 重みありグラフに対してLouvain法を適用してコミュニティを決定する（W: 重み付き）---
+        louvainer = louvain.CommunityLouvain()
+        G = self._calculate_dynamic_W(W, leng=5)
+        communities = louvainer.create_community(self.cow_id_list, W) # louvain法を使用してコミュニティを決定する
+        g = louvainer.create_weighted_graph(self.cow_id_list, G)
+        
+        # #  --- 重みなしグラフに対してLouvain法を適用してコミュニティを決定する（X: 重みなし）---
+        # threshold = self._determine_boundary(score_list) # グラフのエッジを結ぶ閾値を決定する
+        # X = louvainer.exchange__undirected_graph(W, threshold) #重みなし無向グラフを作成する
+        # communities = louvainer.create_community(self.cow_id_list, X) # louvain法を使用してコミュニティを決定する
+        # g = louvainer.create_graph(self.cow_id_list, X)
+        
+        # #  --- DBSCANを使用してコミュニティを決定する（W: 距離行列）---
+        # eps, minPts = 10, 2
+        # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
+        # communities = dbscanner.create_community(W, self.cow_id_list)
+        print("コミュニティを生成しました. ", start)
+        print(communities)
+
+        # --- 可視化を行う ---
+        if (visualized_g):
+            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
+        if (visualized_m):
+            _, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+            self._visualize_community(pos_df, communities) # 動画描画
+        if (focusing_cow_id is not None):
+            community = None
+            for com in communities:
+                if (str(focusing_cow_id) in com):
+                    community = com
+                    break
+            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
+        return communities
+
+    def make_interaction_graph(self, start:datetime.datetime, end:datetime.datetime, method="position", delta=5, epsilon=12, dzeta=10):
+        """ 重み付きグラフのインタラクションがグラフを作成うする
+            method:     str     position or behavior, コミュニティ作成手法
+            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
+            epsilon:    int     method="behavior"用の距離の閾値．単位はメートル
+            dzeta:      int     method="position"用の距離の閾値．単位はメートル """
+        df, _, _ = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
         score_list = []
-        end = start + datetime.timedelta(minutes=interval)
-        # すべての牛の組み合わせに対してスコアを算出する
         K = len(self.cow_id_list)
-        W = np.zeros([K,K])
-        df, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+        W = np.zeros([K,K]) # 重み付き行列．このメソッドの返却値
         for i, cow_id1 in enumerate(self.cow_id_list):
             for j, cow_id2 in enumerate(self.cow_id_list):
                 # インタラクションの決定法によって処理を分岐する
@@ -67,30 +105,7 @@ class CommunityCreater:
                     W[i,j] = 0
                 else:
                     continue
-        # Louvain法を使用したグラフクラスタリング（W: 重み付き, X: 重みなし）
-        louvainer = louvain.CommunityLouvain()
-        # threshold = self._determine_boundary(score_list) # グラフのエッジを結ぶ閾値を決定する
-        # X = louvainer.exchange__undirected_graph(W, threshold) #重みなし無向グラフを作成する
-        # g = louvainer.create_graph(self.cow_id_list, X)
-        communities = louvainer.create_community(self.cow_id_list, W)
-        g = louvainer.create_weighted_graph(self.cow_id_list, W)
-        # eps, minPts = 10, 2
-        # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
-        # communities = dbscanner.create_community(W, self.cow_id_list)
-        print("コミュニティを生成しました. ", start)
-        print(communities)
-        if (visualized_g):
-            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
-        if (visualized_m):
-            self._visualize_community(pos_df, communities) # 動画描画
-        if (focusing_cow_id is not None):
-            community = None
-            for com in communities:
-                if (str(focusing_cow_id) in com):
-                    community = com
-                    break
-            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
-        return communities
+        return W
 
     def _extract_and_merge_df(self, start, end, delta=5):
         """ startからendまでの時間のデータをdeltaごとにスライスして抽出し，行動，空間の2つのデータを結合する(どちらも1秒ごとに成形し，インデックスがTimeになっている前提)
@@ -164,9 +179,29 @@ class CommunityCreater:
         threshold = (X[min_i-1] + X[min_i]) / 2 # 分割点をエッジを結ぶ閾値とする
         return threshold
 
+    def _calculate_dynamic_W(self, W, leng = 5):
+        """ 時系列を考慮したインタラクショングラフ（重み付きグラフ）を作成する
+            W: np.array(2D) 今回のタイムスタンプでのインタラクショングラフ（重み付き無向グラフ）
+            leng: int       考慮するインタラクショングラフの個数（過去分） """
+        K = len(W)
+        G = np.zeros((K, K)) # 今回の返却値, 重み付きグラフ
+        # 今回のタイムスロットでのインタラクショングラフを追加し，古くなったインタラクショングラフを削除する
+        if (len(self.community_history) < leng):
+            self.community_history.append(W) # コミュニティ履歴に追加
+        else:
+            self.community_history.pop(0) # コミュニティ履歴からlen以上昔の要素となる0番目を削除する
+            self.community_history.append(W) # コミュニティ履歴に追加
+        # 時間減衰を考慮し，重み付きグラフを足し合わせることでこのタイムスロットでのクラスタリングのための重み付きグラフを作成する
+        leng = len(self.community_history) if len(self.community_history) < leng else leng # コミュニティ履歴がleng未満の時
+        for i in range(leng):
+            zeta = math.e ** (-1 * i) # 減衰率
+            G += zeta * self.community_history[leng - i - 1]
+        return G
+
+
     def _visualize_graph(self, g, communities:list, date:datetime.datetime, weighted=False):
         """ インタラクショングラフを描画する """
-        save_path = "./synchronization/graph/" + date.strftime("%Y%m%d/")
+        save_path = "./visualization/graph/" + date.strftime("%Y%m%d/")
         num_nodes = len(g.nodes)
         node_colors = [(1,0,0), (0,1,0), (0,0,1), (1,1,0), (0,1,1), (1,0,1), (0,0,0), (0,0.5,0.5), (0.5,0,0.5),(0.5,0.5,0)]
         color_list = []
