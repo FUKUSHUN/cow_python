@@ -19,17 +19,20 @@ class BehaviorLoader:
         before_v = 0.0
         before_b = 0 # 休息
         for _, row in df.iterrows():
-            t = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") # datetime
-            v = float(row[1])
-            b = int(row[2])
-            # --- 1秒ずつのデータに直し、データごとのずれを補正する ---
-            while (before_t < t):
-                row = (before_t, (before_v, before_b))
-                revised_data.append(row)
-                before_t += datetime.timedelta(seconds=1)
-            before_t = t
-            before_v = v
-            before_b = b
+            try:
+                t = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") # datetime
+                v = float(row[1])
+                b = int(row[2])
+                # --- 1秒ずつのデータに直し、データごとのずれを補正する ---
+                while (before_t < t):
+                    row = (before_t, (before_v, before_b))
+                    revised_data.append(row)
+                    before_t += datetime.timedelta(seconds=1)
+                before_t = t
+                before_v = v
+                before_b = b
+            except TypeError:
+                continue
         end_t = datetime.datetime.strptime(date.strftime("%Y%m%d"), "%Y%m%d") + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌日午前9時を終わりとする
         while (before_t < end_t):
             t = before_t

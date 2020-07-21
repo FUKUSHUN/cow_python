@@ -37,48 +37,7 @@ class CommunityCreater:
         cl2 = self.position_synch.get_cow_id_list()
         return sorted(list(set(cl1) & set(cl2))) # 二つの牛のIDリストの重複を牛のリスト, 必ずソートする
 
-
-    def create_community(self, start, end, W:np.array, visualized_g=False, visualized_m=False, focusing_cow_id=None, delta=5):
-        """ インタラクショングラフを作成する, methodは複数用意する予定
-            W:          np.array            : インタラクショングラフ（重み付きグラフの行列）
-            visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
-            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する
-            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている) """
-        # --- 重みありグラフに対してLouvain法を適用してコミュニティを決定する（W: 重み付き）---
-        louvainer = louvain.CommunityLouvain()
-        G = self._calculate_dynamic_W(W, leng=5)
-        communities = louvainer.create_community(self.cow_id_list, W) # louvain法を使用してコミュニティを決定する
-        g = louvainer.create_weighted_graph(self.cow_id_list, G)
-        
-        # #  --- 重みなしグラフに対してLouvain法を適用してコミュニティを決定する（X: 重みなし）---
-        # threshold = self._determine_boundary(score_list) # グラフのエッジを結ぶ閾値を決定する
-        # X = louvainer.exchange__undirected_graph(W, threshold) #重みなし無向グラフを作成する
-        # communities = louvainer.create_community(self.cow_id_list, X) # louvain法を使用してコミュニティを決定する
-        # g = louvainer.create_graph(self.cow_id_list, X)
-        
-        # #  --- DBSCANを使用してコミュニティを決定する（W: 距離行列）---
-        # eps, minPts = 10, 2
-        # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
-        # communities = dbscanner.create_community(W, self.cow_id_list)
-        print("コミュニティを生成しました. ", start)
-        print(communities)
-
-        # --- 可視化を行う ---
-        if (visualized_g):
-            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
-        if (visualized_m):
-            _, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
-            self._visualize_community(pos_df, communities) # 動画描画
-        if (focusing_cow_id is not None):
-            community = None
-            for com in communities:
-                if (str(focusing_cow_id) in com):
-                    community = com
-                    break
-            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
-        return communities
-
-    def make_interaction_graph(self, start:datetime.datetime, end:datetime.datetime, method="position", delta=5, epsilon=12, dzeta=10):
+    def make_interaction_graph(self, start:datetime.datetime, end:datetime.datetime, method="position", delta=5, epsilon=12, dzeta=12):
         """ 重み付きグラフのインタラクションがグラフを作成うする
             method:     str     position or behavior, コミュニティ作成手法
             delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
@@ -107,6 +66,47 @@ class CommunityCreater:
                     continue
         return W
 
+    def create_community(self, start, end, W:np.array, visualized_g=False, visualized_m=False, focusing_cow_id=None, delta=5, leng=5):
+        """ インタラクショングラフを作成する, methodは複数用意する予定
+            W:          np.array            : インタラクショングラフ（重み付きグラフの行列）
+            visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
+            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する
+            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている) 
+            leng        int     過去の重み付きグラフの考慮数 """
+        # --- 重みありグラフに対してLouvain法を適用してコミュニティを決定する（W: 重み付き）---
+        louvainer = louvain.CommunityLouvain()
+        G = self._calculate_dynamic_W(W, leng=leng)
+        communities = louvainer.create_community(self.cow_id_list, G) # louvain法を使用してコミュニティを決定する
+        g = louvainer.create_weighted_graph(self.cow_id_list, G)
+        
+        # #  --- 重みなしグラフに対してLouvain法を適用してコミュニティを決定する（X: 重みなし）---
+        # threshold = self._determine_boundary(score_list) # グラフのエッジを結ぶ閾値を決定する
+        # X = louvainer.exchange__undirected_graph(G, threshold) #重みなし無向グラフを作成する
+        # communities = louvainer.create_community(self.cow_id_list, X) # louvain法を使用してコミュニティを決定する
+        # g = louvainer.create_graph(self.cow_id_list, X)
+        
+        # #  --- DBSCANを使用してコミュニティを決定する（W: 距離行列）---
+        # eps, minPts = 10, 2
+        # dbscanner = dbscan.CommunityDBSCAN(eps, minPts)
+        # communities = dbscanner.create_community(W, self.cow_id_list)
+        print("コミュニティを生成しました. ", start)
+        print(communities)
+
+        # --- 可視化を行う ---
+        if (visualized_g):
+            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
+        if (visualized_m):
+            _, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+            self._visualize_community(pos_df, communities) # 動画描画
+        if (focusing_cow_id is not None):
+            community = None
+            for com in communities:
+                if (str(focusing_cow_id) in com):
+                    community = com
+                    break
+            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
+        return communities
+
     def _extract_and_merge_df(self, start, end, delta=5):
         """ startからendまでの時間のデータをdeltaごとにスライスして抽出し，行動，空間の2つのデータを結合する(どちらも1秒ごとに成形し，インデックスがTimeになっている前提)
             delta   : int. 単位は[s (個)]. この個数ごとに等間隔でデータをスライス """
@@ -118,7 +118,7 @@ class CommunityCreater:
     def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, epsilon=30):
         """ 行動同期スコアを計算する
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
-        score_matrix = np.array([[1,0,0], [0,1,0], [0,0,9]])
+        score_matrix = np.array([[1,0,0], [0,2,0], [0,0,3]])
         df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
@@ -133,14 +133,20 @@ class CommunityCreater:
     def _calculate_position_synchronization(self, df, cow_id1, cow_id2, dzeta=10):
         """ 空間同期スコアを計算する 
             dzeta   : int. 単位は [m]. この距離以内の時間を計測する """
+        dist_matrix = np.array([3, 6, dzeta])
+        score_matrix = np.array([3, 2, 1, 0])
         df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
             lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
             dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
-            if (dis <= dzeta):
-                score += 1
+            if (dis <= dist_matrix[0]):
+                score += score_matrix[0]
+            elif (dis <= dist_matrix[1]):
+                score += score_matrix[1]
+            elif (dis <= dist_matrix[2]):
+                score += score_matrix[2]
         return score
 
     def _calculate_average_distance(self, df, cow_id1, cow_id2):
