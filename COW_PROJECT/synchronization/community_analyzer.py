@@ -191,14 +191,13 @@ class CommunityAnalyzer:
         density = count / (K * (K-1) / 2) if 1 < K else 0
         return density
 
-    def get_community_union(self, start, end, cow_id):
-        """ ある牛のある時間帯のコミュニティメンバの和集合を求める """
-        union_set = set()
-        for (time, communities) in self.communities_list:
-            if (start <= time and time < end):
-                for community in communities:
-                    if (str(cow_id) in community):
-                        union_set = union_set | set(community) # 和集合
-            elif (end <= time):
+    def get_particular_community_list(self, start, end, cow_id):
+        community_list = []
+        for (t, communities) in self.communities_list:
+            if (start <= t and t < end):
+                for com in communities:
+                    if (str(cow_id) in com):
+                        community_list.append(com)
+            elif (end <= t):
                 break
-        return sorted(union_set)
+        return community_list

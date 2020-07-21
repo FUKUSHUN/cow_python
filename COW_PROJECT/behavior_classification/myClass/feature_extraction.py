@@ -9,7 +9,7 @@ import os
 import statistics
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
 import pickle
 
 # 自作クラス
