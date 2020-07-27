@@ -123,6 +123,7 @@ class CommunityCreater:
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
+            row = list(row)
             lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
             dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
             # 距離が閾値以内ならスコアを加算する
