@@ -30,9 +30,10 @@ if __name__ == '__main__':
     delta_c = 2 # コミュニティの抽出間隔 [minutes]
     delta_s = 5 # データのスライス間隔 [seconds] 
     epsilon = 12 # コミュニティ決定のパラメータ
-    dzeta = 10 # コミュニティ決定のパラメータ
-    start = datetime.datetime(2018, 10, 21, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 24, 0, 0, 0)
+    dzeta = 12 # コミュニティ決定のパラメータ
+    leng = 5 # コミュニティ決定のパラメータ
+    start = datetime.datetime(2018, 9, 26, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 18, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     change_point_file = "./synchronization/change_point/"
     output_file = "./synchronization/output/"
@@ -48,9 +49,9 @@ if __name__ == '__main__':
         t_start = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
-            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="behavior", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
+            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="position", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
-            community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, visualized_g=False, visualized_m=False, delta=delta_s) \
+            community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, visualized_g=False, visualized_m=False, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
             analyzer.append_community([t, community])
             analyzer.append_graph([t, interaction_graph])
@@ -64,14 +65,14 @@ if __name__ == '__main__':
             behavior_synch = com_creater.get_behavior_synch()
             position_synch = com_creater.get_position_synch()
             inte_analyzer = interaction_analyzer.InteractionAnalyzer(cow_id, behavior_synch, position_synch)
-            my_utility.write_values(output_file+str(cow_id)+".csv", [["Start Time", "Density Average", "Walking Time", "Minimun Dist", "Minimum Dist Cow"]])
+            my_utility.write_values(output_file+str(cow_id)+".csv", [["Start Time", "Density Average", "Synchronization Ratio", "Walking Time", "Minimun Dist", "Minimum Dist Cow"]])
             features_list = []
             for (start_point, end_point) in change_points:
                 interval = int((end_point - start_point).total_seconds()/60)
-                community = analyzer.get_community_union(start_point, end_point ,str(cow_id))
-                features = inte_analyzer.extract_feature(start_point, end_point, community)
+                community_list = analyzer.get_particular_community_list(start_point, end_point ,str(cow_id))
+                features = inte_analyzer.extract_feature(start_point, end_point, community_list, delta_c=delta_c)
                 ave_dense = analyzer.calculate_average_graph_density(start_point, end_point, str(cow_id))
-                features_list.append([start_point, ave_dense, features[0]*features[4], features[7], features[6]])
+                features_list.append([start_point, ave_dense, features[2], features[0]*features[5], features[8], features[7]])
             my_utility.write_values(output_file+str(cow_id)+".csv", features_list)
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")

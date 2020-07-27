@@ -1,6 +1,7 @@
 import datetime
 import numpy as np
 import pandas as pd
+import copy
 
 import pdb
 
@@ -23,15 +24,16 @@ class InteractionAnalyzer:
         self.behavior_synch = behavior_synch
         self.position_synch = position_synch
 
-    def extract_feature(self, start:datetime.datetime, end:datetime.datetime, community):
+    def extract_feature(self, start:datetime.datetime, end:datetime.datetime, communities, delta_c=2):
         """ 特徴を抽出し，その時間幅での各特徴をリストとして出力
             Parameter
                 df: pd.DataFrame    時間幅で抽出された行動と位置のすべての牛のデータ (1秒ごとのデータではないので注意)
-                community: list     対象とする牛が含まれるコミュニティ
+                communities: 2次元list     対象とする牛が含まれるコミュニティの時系列データ
+                delta_c:    コミュニティの生成間隔．単位は分
             Return
                 features: 特徴のリスト """
         # 自分の牛のデータのみを抽出
-        both_df, beh_df, pos_df = self._extract_and_merge_df(start, end, delta = 5)
+        both_df, beh_df, pos_df = self._extract_and_merge_df(start, end, delta=5)
         # 時間特徴
         time_interval = (end - start).total_seconds() / 60 # 単位を分にする
         # 行動特徴
@@ -40,11 +42,21 @@ class InteractionAnalyzer:
         # 距離特徴
         my_pos_df = pos_df[[str(self.cow_id)]]
         total_distance = self._measure_mileage(my_pos_df)
-        # コミュニティサイズ
-        community_size = len(community)
         # 最も距離の近かった牛（平均）との距離
-        minimum_dist_cow, minimum_dist = self._find_minimun_distance(pos_df, community)
-        features = [time_interval, total_distance, behavior_ratio['rest'], behavior_ratio['graze'], behavior_ratio['walk'], community_size, minimum_dist_cow, minimum_dist]
+        community_union = self._get_community_union(communities)
+        minimum_dist_cow, minimum_dist = self._find_minimun_distance(pos_df, community_union)
+        community_size_list, synchron_ratio_list = [], []
+        time = start
+        for community in communities:
+            # コミュニティサイズ
+            community_size_list.append(len(community))
+            # 同期度
+            used_df, _, _ = self._extract_and_merge_df(time, time+datetime.timedelta(minutes=delta_c), delta=5)
+            synchron_ratio_list.append(self._measure_synchronization_ratio(used_df, community, epsilon=12))
+            time += datetime.timedelta(minutes=delta_c)
+        community_size = sum(community_size_list) / len(community_size_list)
+        synchron_ratio = sum(synchron_ratio_list) / len(synchron_ratio_list)
+        features = [time_interval, total_distance, synchron_ratio, behavior_ratio['rest'], behavior_ratio['graze'], behavior_ratio['walk'], community_size, minimum_dist_cow, minimum_dist]
         # self._visualize_adjectory(pos_df, [str(self.cow_id), str(minimum_dist_cow)])
         return features
 
@@ -84,6 +96,28 @@ class InteractionAnalyzer:
                 mileage += dis
             before_lat, before_lon = lat, lon
         return mileage
+    
+    def _measure_synchronization_ratio(self, df, community, epsilon=30):
+        """ 行動同期度を算出する """
+        score_matrix = np.array([[1,0,0], [0,2,0], [0,0,3]]) # 行動同期のスコア
+        comm = copy.deepcopy(community) # 一応コピー
+        comm.remove(str(self.cow_id)) # コミュニティから対象牛の要素を削除
+        if (len(comm) != 0): # コミュニティメンバが自分だけでないとき
+            # --- 対象牛と他のコミュニティメンバとの行動同期度を算出する ---
+            score_list = []
+            for other_cow_id in comm:
+                score = 0
+                df2 = df[[str(self.cow_id), str(other_cow_id)]]
+                for _, row in df2.iterrows():
+                    lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
+                    dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+                    # 距離が閾値以内ならスコアを加算する
+                    if (dis <= epsilon):
+                        score += score_matrix[row[0][1],row[2][1]]
+                score_list.append(score)
+            return sum(score_list) / len(score_list)
+        else: # コミュニティメンバが自分だけのとき
+            return 0
 
     def _find_minimun_distance(self, df, community):
         """ 最も総距離の短い牛との間の距離の平均を求める """
@@ -127,3 +161,10 @@ class InteractionAnalyzer:
         maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
         maker.make_adjectory(new_df)
         return
+
+    def _get_community_union(self, communities_list):
+        """ ある牛のある時間帯のコミュニティメンバの和集合を求める """
+        union_set = set()
+        for community in communities_list:
+            union_set = union_set | set(community) # 和集合
+        return sorted(union_set)

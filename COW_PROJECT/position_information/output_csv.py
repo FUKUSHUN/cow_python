@@ -49,8 +49,8 @@ def translate(lat, lon):
 	return lat_d + lat_m, lon_d + lon_m
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 10, 1, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
-    end = datetime.datetime(2018, 11, 1, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
+    start = datetime.datetime(2018, 10, 2, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
+    end = datetime.datetime(2018, 10, 11, 0, 0, 0) # イギリス時間 (時差9時間なのでちょうど良い)
     output_dirpath = "./position_information/" # 分析用のファイル
 
     date = start
