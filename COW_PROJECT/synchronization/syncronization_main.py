@@ -32,7 +32,7 @@ if __name__ == '__main__':
     epsilon = 12 # コミュニティ決定のパラメータ
     dzeta = 12 # コミュニティ決定のパラメータ
     leng = 5 # コミュニティ決定のパラメータ
-    start = datetime.datetime(2018, 10, 4, 0, 0, 0)
+    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
     end = datetime.datetime(2018, 10, 31, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     change_point_file = "./synchronization/change_point/"
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
             t_list.append(t)
-            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="position", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
+            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="behavior", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
             community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, visualized_g=False, visualized_m=True, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
@@ -70,7 +70,7 @@ if __name__ == '__main__':
             value_list = list(score_dict[str(cow_id)])
             change_point = list(change_point_dict[str(cow_id)])
             change_time_list = []
-            my_utility.write_values(change_point_file+str(cow_id)+".csv", [["Start Time", "End Time", "Community Union"]])
+            my_utility.write_values(change_point_file+str(cow_id)+".csv", [["Start Time", "End Time"]])
             # change_point.pop(0) # 最初の要素（午前9時の牛舎にいる時間を取り除く）
             for i, start_point in enumerate(change_point):
                 end_point = change_point[i+1] if (i != len(change_point)-1) else t_end
