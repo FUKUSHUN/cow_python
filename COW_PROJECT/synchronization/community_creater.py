@@ -118,7 +118,7 @@ class CommunityCreater:
     def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, epsilon=30):
         """ 行動同期スコアを計算する
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
-        score_matrix = np.array([[1,0,-1], [0,3,0], [-1,0,9]])
+        score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
         df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
@@ -201,9 +201,9 @@ class CommunityCreater:
         # 時間減衰を考慮し，重み付きグラフを足し合わせることでこのタイムスロットでのクラスタリングのための重み付きグラフを作成する
         leng = len(self.community_history) if len(self.community_history) < leng else leng # コミュニティ履歴がleng未満の時
         for i in range(leng):
-            zeta = math.e ** (-1 * i) # 減衰率
+            zeta = math.e ** (-1 * i) / (i + 1) # 減衰率
             G += zeta * self.community_history[leng - i - 1]
-        # 重みが負のエッジについてはゼロを置く（重みの総和が0になることを防ぐため．そのまま負の重みをホールドさせた方が良いのかもしれない）
+        # 重みが負のエッジについてはゼロにリプレイス（重みの総和が0になることを防ぐため．そのまま負の重みをホールドさせた方が良いのかもしれない）
         for i in range(K):
             for j in range(K):
                 if (G[i, j] < 0):
