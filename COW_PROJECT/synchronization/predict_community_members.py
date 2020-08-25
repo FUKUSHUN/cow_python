@@ -18,6 +18,7 @@ import synchronization.interaction_analyzer as interaction_analyzer
 import synchronization.functions.utility as my_utility
 import synchronization.prediction_model.preprocess as prediction
 from synchronization.prediction_model.neural_network import LearnerForNeuralNetwork
+from synchronization.graph_operation.graph_series import GraphSeriesAnalysis
 
 from sklearn.metrics import (precision_score, recall_score, accuracy_score, f1_score, roc_curve, roc_auc_score) # for evaluation
 def test(clf, test_X:np.array, test_y:np.array):
@@ -49,7 +50,7 @@ if __name__ == "__main__":
     change_point_file = "./synchronization/change_point/"
     output_file = "./synchronization/output/"
     date = start
-    target_list = [20113,20170,20295,20299]
+    target_list = ['20113','20170','20295','20299']
     while (date < end):
         s1 = time.time()
         t_list = []
@@ -72,30 +73,11 @@ if __name__ == "__main__":
         e1 = time.time()
         print("処理時間", (e1-s1)/60, "[min]")
         # --- 次のコミュニティを予測する ---
-        pickle_file = "./synchronization/prediction_model/model.pickle" 
         s2 = time.time()
-        d = 5
         interaction_graph_list = [graph for t, graph in analyzer.graph_list]
-        communities_list = [communities for t, communities in analyzer.communities_list]
-        preprocessor = prediction.Preprocessor(cow_id_list)
-        X, y = preprocessor.preprocess(interaction_graph_list, communities_list, d)
-        # --- コミュニティの予測モデルを作成 ---
-        # neural_network_parameters = {
-        #     "hidden_layer_sizes":[(3,),(5,),(10,),(3,3),(5,5),(10,10),(3,3,3),(5,5,5),(10,10,10)],
-        #     "activation":["relu", "sigmoid", "tanh"],
-        #     "solver":["lbfgs", "sgd", "adam"],
-        #     "alpha":[10**i for i in range(-5, -2)],
-        #     "learning_rate_init":[10**i for i in range(-7, 0)]
-        # }
-        # fold = ShuffleSplit(n_splits=5, random_state=1)
-        # nn_learner = LearnerForNeuralNetwork(candidate_params=neural_network_parameters, fold=fold, scoring="accuracy")
-        # best_params = nn_learner.fit(X, y)
-        # pickle.dump(nn_learner.clf, open(pickle_file, 'wb'))
-
-        # --- コミュニティの予測モデルをテストする ---
-        loaded_model = pickle.load(open(pickle_file, 'rb'))
-        accuracy, precision, recall, f_measure, auc = test(loaded_model, X, y)
-        print(accuracy, precision, recall, f_measure, auc)
+        graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
+        for cow_id in target_list:
+            change_points = graph_analyzer.detect_change_point(cow_id, t_list)
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         pdb.set_trace()

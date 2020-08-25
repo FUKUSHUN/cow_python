@@ -23,6 +23,7 @@ class CommunityAnalyzer:
         """ インタラクショングラフを格納する
             element : list  [datetime, graph:ndarray]の要素を追加する """
         self.graph_list.append(element)
+        return
 
     def detect_change_point(self, target_list, tau=5, upsiron=1):
         """ コミュニティの変化点を検知する
