@@ -77,7 +77,7 @@ if __name__ == "__main__":
         interaction_graph_list = [graph for t, graph in analyzer.graph_list]
         graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
         for cow_id in target_list:
-            change_points = graph_analyzer.detect_change_point(cow_id, t_list)
+            change_points, score_list = graph_analyzer.detect_change_point(cow_id, t_list)
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         pdb.set_trace()
