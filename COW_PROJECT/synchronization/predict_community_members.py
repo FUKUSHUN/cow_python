@@ -78,6 +78,10 @@ if __name__ == "__main__":
         graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
         for cow_id in target_list:
             change_points, score_list = graph_analyzer.detect_change_point(cow_id, t_list)
+            df = pd.concat([pd.Series(t_list), pd.Series(score_list)], axis=1, names=["time", "score"])
+            df.to_csv("test.csv")
+            graph_analyzer.visualize_graph(cow_id, t_list)
+            pdb.set_trace()
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         pdb.set_trace()

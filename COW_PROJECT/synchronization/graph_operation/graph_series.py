@@ -6,8 +6,8 @@ import pandas as pd
 import pdb
 
 # my class
-# from synchronization.graph_operation.graph import GraphAnalysis
-from graph import GraphAnalysis
+from synchronization.graph_operation.graph import GraphAnalysis
+# from graph import GraphAnalysis
 
 class GraphSeriesAnalysis:
     """ グラフの系列（時系列）を扱い、変化点を検出する機能を備えるクラス """
@@ -31,28 +31,48 @@ class GraphSeriesAnalysis:
                 last_graph = graph
                 # 変化点となる時刻を格納する
                 changepoint_list.append(1)
-                score_list.append(1)
+                score_list.append(0)
             else:
                 isChanged, score = self._compare_graph(target_cow_index, graph, last_graph)
                 last_graph = graph
                 # 変化点となる時刻を格納する
                 if(isChanged):
                     changepoint_list.append(1)
-                    score_list.append(1-score)
+                    score_list.append(score)
                 else:
                     changepoint_list.append(0)
-                    score_list.append(1-score)
+                    score_list.append(score)
         return changepoint_list, score_list
+    
+    def visualize_graph(self, target_cow_id, t_list):
+        """ グラフの可視化を行う """
+        save_path = "./visualization/graph/" + str(target_cow_id) + t_list[0].strftime("/%Y%m%d/")
+        target_cow_index = self.cow_id_list.index(str(target_cow_id))
+        self._confirm_dir(save_path)
+        for i, graph in enumerate(self.graph_series):
+            filename = t_list[i].strftime("%H%M.png")
+            ga = GraphAnalysis(graph, None)
+            ga.visualize_graph(target_cow_index, self.cow_id_list, save_path, filename, max_depth=3)
+        return
 
     def _compare_graph(self, target_index, graph1, graph2, threshold = 0.3):
         """ 2つのグラフを比較し、変化点ならTrue, そうでなければFalseを返す
             target_index: 変化点検知の対象となる牛の隣接行列内の番号（何行（何列）目か）
             graph1, graph2: np.array(2d)    隣接行列 """
         ga = GraphAnalysis(graph1, graph2)
-        score = ga.measure_similarity(target_index) # 2つのグラフの構造的類似度
+        score = ga.measure_similarity(target_index, max_depth=3) # 2つのグラフの構造的類似度
         if (threshold <= score):
             return True, score
         return False, score
+
+    def _confirm_dir(self, dir_path):
+        """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
+        if (os.path.isdir(dir_path)):
+            return
+        else:
+            os.makedirs(dir_path)
+            print("ディレクトリを作成しました", dir_path)
+            return
 
 if __name__ == "__main__":
     os.chdir('../../') # カレントディレクトリを一階層上へ
