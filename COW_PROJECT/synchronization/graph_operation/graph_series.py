@@ -18,10 +18,9 @@ class GraphSeriesAnalysis:
         self.cow_id_list = cow_id_list
         self.graph_series = graph_series
 
-    def detect_change_point(self, target_cow_id, t_list):
+    def detect_change_point(self, target_cow_id):
         """ 変化点をグラフの変化から検知する（外部から呼び出されるメインのメソッド）
-            target_cow_id: 変化点検知の対象とする牛の個体番号
-            t_list: 時刻のリスト．インデックスに対応 """
+            target_cow_id: 変化点検知の対象とする牛の個体番号 """
         changepoint_list = [] # 変化点なら1, そうでなければ0
         score_list = [] # グラフ類似度のスコアを格納
         target_cow_index = self.cow_id_list.index(str(target_cow_id))
@@ -52,15 +51,15 @@ class GraphSeriesAnalysis:
         for i, graph in enumerate(self.graph_series):
             filename = t_list[i].strftime("%H%M.png")
             ga = GraphAnalysis(graph, None)
-            ga.visualize_graph(target_cow_index, self.cow_id_list, save_path, filename, max_depth=3)
+            ga.visualize_graph(target_cow_index, self.cow_id_list, save_path, filename, max_depth=1)
         return
 
     def _compare_graph(self, target_index, graph1, graph2, threshold = 0.3):
         """ 2つのグラフを比較し、変化点ならTrue, そうでなければFalseを返す
             target_index: 変化点検知の対象となる牛の隣接行列内の番号（何行（何列）目か）
             graph1, graph2: np.array(2d)    隣接行列 """
-        ga = GraphAnalysis(graph1, graph2)
-        score = ga.measure_similarity(target_index, max_depth=3) # 2つのグラフの構造的類似度
+        ga = GraphAnalysis(graph1, graph2) # graph1が現在，graph2が直前
+        score = ga.measure_similarity(target_index, max_depth=1) # 2つのグラフの構造的類似度
         if (threshold <= score):
             return True, score
         return False, score
@@ -112,7 +111,7 @@ if __name__ == "__main__":
     s2 = time.time()
     graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
     for cow_id in target_list:
-        change_points, score_list = graph_analyzer.detect_change_point(cow_id, t_list)
+        change_points, score_list = graph_analyzer.detect_change_point(cow_id)
         df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1)
         df.to_csv(output_file+cow_id+".csv")
     e2 = time.time()

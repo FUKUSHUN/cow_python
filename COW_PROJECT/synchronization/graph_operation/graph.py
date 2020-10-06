@@ -22,20 +22,20 @@ class GraphAnalysis:
             cow_id_list: 牛の個体番号のリスト
             focused_index: 隣接行列の何番目に注目するか（グラフから注目ノードから到達できる部分グラフを探索し比較するために必要）
             element_threshold: 部分グラフのノード数の上限 """
-        node_list1, sub_graph1 = self._extract_subgraph(self.graph1, focused_index, max_depth=max_depth)
-        node_list2, sub_graph2 = self._extract_subgraph(self.graph2, focused_index, max_depth=max_depth)
+        node_list1, depth_list1 = self._extract_subgraph(self.graph1, focused_index, max_depth=max_depth)
+        node_list2, depth_list2 = self._extract_subgraph(self.graph2, focused_index, max_depth=max_depth)
         union_node_set = set(node_list1) | set(node_list2)
         cut_graph1 = self._cut_graph(self.graph1, union_node_set)
         cut_graph2 = self._cut_graph(self.graph2, union_node_set)
         # patterns1 = self._extract_patterns(sub_graph1, node_list1, focused_index, max_depth=element_threshold)
         # patterns2 = self._extract_patterns(sub_graph2, node_list2, focused_index, max_depth=element_threshold)
-        distance = self._caluculate_similarity(cut_graph1, cut_graph2)
+        distance = self._caluculate_similarity(cut_graph1, cut_graph2, focused_index)
         return distance
     
     def visualize_graph(self, focused_index, label_list, save_path, filename, max_depth=None):
-        node_list1, sub_graph1 = self._extract_subgraph(self.graph1, focused_index, max_depth=max_depth)
+        node_list1, depth_list1 = self._extract_subgraph(self.graph1, focused_index, max_depth=max_depth)
         cut_graph1 = self._cut_graph(self.graph1, node_list1)
-        color_list = [1 if i in node_list1 else 0 for i in range(len(label_list))]
+        color_list = [depth_list1[i] for i in range(len(label_list))]
         self._visualize_graph(cut_graph1, label_list, color_list, save_path, filename, weighted=True)
         return
 
@@ -52,6 +52,8 @@ class GraphAnalysis:
         visited_node_set = set([]) # 到達可能なノードのうち探索済みのものを保管する
         # --- 到達可能なノードを探索 ---
         depth = 1 # 探索の深さ（注目ノードからどれだけ離れているか）
+        depth_list = np.full(len(graph), -1) # 各ノードが注目ノードからの深さ（未探索は-1）
+        depth_list[index] = 0 # 注目ノードの深さは0とする
         while((len(unvisited_node_set) != 0 and max_depth is None) or (max_depth is not None and depth <= max_depth)):
             arrivable_node_set = set([])
             # 幅優先探索
@@ -65,12 +67,13 @@ class GraphAnalysis:
             for j in arrivable_node_set:
                 if (not j in visited_node_set): # 探索済みでなければ
                     unvisited_node_set.add(j) # 到達可能ノードを追加 (セットなので重複要素は追加されない, 未探索を更新)
+                    depth_list[j] = depth
                 node_set.add(j) # 到達可能ノードを追加 (セットなので重複要素は追加されない, 到達可能を更新)
             depth += 1 # 深さを更新
         # --- 部分グラフを抽出する ---
         node_list = sorted(list(node_set))
         sub_graph = graph[np.ix_(node_list, node_list)] # 対象の行と列をもとの行列から抜き出す
-        return node_list, sub_graph
+        return node_list, depth_list
     
     def _extract_patterns(self, graph, node_list, focused_index, max_depth=None):
         """ グラフからパターン（部分グラフ）を抽出する
@@ -114,15 +117,14 @@ class GraphAnalysis:
                     cut_graph[i, j] = graph[i, j]
         return cut_graph
 
-    def _caluculate_similarity(self, graph1, graph2):
+    def _caluculate_similarity(self, graph1, graph2, focused_index):
         """ パターン（部分グラフ）からグラフ間の類似度を算出する（算出式については確定ではなく、変更時にはこのメソッド内を変更するとする）
             patterns1, patterns2: list """
         distance = 0.0
         N = len(graph1)
         for i in range(N):
-            for j in range(N):
-                distance += abs(graph1[i,j] - graph2[i,j])
-        return distance / 2 # 向きがないため単純に2倍になる
+            distance += abs(graph1[i,focused_index] - graph2[i,focused_index]) # 注目する牛との間のエッジを見る
+        return distance
     
     def _visualize_graph(self, graph, label_list, color_list:list, save_path:str, filename:str, weighted=False):
         """ インタラクショングラフを描画する
@@ -134,7 +136,7 @@ class GraphAnalysis:
             weighted: bool      重み付きを表示するかどうか """
         g = self._create_nxgraph(label_list, graph)
         num_nodes = len(g.nodes)
-        node_colors = [(1,0,0), (0,1,0), (0,0,1), (1,1,0), (0,1,1), (1,0,1), (0,0,0), (0,0.5,0.5), (0.5,0,0.5),(0.5,0.5,0)]
+        node_colors = [(1,0,0,1.0), (1,0,0,0.7), (1,0,0,0.5), (1,0,0,0.4), (1,0,0,0.3), (1,0,0,0.2), (1,0,0,0.15), (1,0,0,0.1), (1,0,0,0.05),(1,0,0,0.0)]
         color_list = [node_colors[i%len(node_colors)] for i in color_list]
         plt.figure(figsize=(19.2, 9.67))
         # 円状にノードを配置
@@ -144,7 +146,7 @@ class GraphAnalysis:
         }
         #ノードとエッジの描画
         nx.draw_networkx_edges(g, pos, edge_color='y')
-        nx.draw_networkx_nodes(g, pos, node_color=color_list, alpha=0.5) # alpha: 透明度の指定
+        nx.draw_networkx_nodes(g, pos, node_color=color_list) # alpha: 透明度の指定
         nx.draw_networkx_labels(g, pos, font_size=10) #ノード名を付加
         if (weighted):
             edge_labels = {(i, j): w['weight'] for i, j, w in g.edges(data=True)}
@@ -173,8 +175,9 @@ class GraphAnalysis:
 if __name__ == "__main__":
     graph1 = np.array([[0, 1, 1, 1], [1, 0, 1, 0], [1, 1, 0, 1], [1, 0, 1, 0]])
     graph2 = np.array([[0, 1, 1, 0, 0], [1, 0, 0, 0, 0], [1, 0, 0, 1, 1], [0, 0, 1, 0, 1], [0, 0, 1, 1, 0]])
-    graph3 = np.array([[0, 0.5, 1, 0, 0, 0], [0.5, 0, 0, 1, 1, 1], [1, 0, 0, 1, 1, 0], [0, 1, 1, 0, 1, 1], [0, 1, 1, 1, 0, 1], [0, 1, 0, 1, 0, 0]])
-    graph4 = np.array([[0, 1, 1, 0, 0, 0], [1, 0, 0, 1, 1, 0], [1, 0, 0, 1, 1, 0], [0, 1, 1, 0, 1, 1], [0, 1, 1, 1, 0, 1], [0, 0, 0, 1, 0, 0]])
+    graph3 = np.array([[0, 1, 1, 0, 0, 1], [1, 0, 1, 1, 1, 0], [1, 1, 0, 1, 1, 0], [0, 1, 1, 0, 0, 1], [0, 1, 1, 0, 0, 0], [1, 0, 0, 1, 0, 0]])
+    graph4 = np.array([[0, 1, 1, 0, 0, 0], [1, 0, 0, 1, 1, 0], [1, 0, 0, 1, 1, 0], [0, 1, 1, 0, 0, 1], [0, 1, 1, 0, 0, 0], [0, 0, 0, 1, 0, 0]])
     ga = GraphAnalysis(graph3, graph4)
-    ga.measure_similarity(0, max_depth=2)
-    ga.visualize_graph(0, ["10", "20", "30", "40", "50", "60"], "./test/", "graph.png", max_depth=3)
+    distance =ga.measure_similarity(0, max_depth=1)
+    print("distance: ", distance)
+    ga.visualize_graph(0, ["10", "20", "30", "40", "50", "60"], "./test/", "graph.png", max_depth=2)

@@ -16,20 +16,17 @@ class BehaviorLoader:
         # --- 1秒ごとのデータに整形し、self.dataに登録 ---
         revised_data = [] # 新規登録用リスト
         before_t = datetime.datetime.strptime(date.strftime("%Y%m%d"), "%Y%m%d") + datetime.timedelta(hours=12) # 正午12時を始まりとする
-        before_v = 0.0
         before_b = 0 # 休息
         for _, row in df.iterrows():
             try:
                 t = datetime.datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S") # datetime
-                v = float(row[1])
                 b = int(row[2])
                 # --- 1秒ずつのデータに直し、データごとのずれを補正する ---
                 while (before_t < t):
-                    row = (before_t, (before_v, before_b))
+                    row = (before_t, before_b)
                     revised_data.append(row)
                     before_t += datetime.timedelta(seconds=1)
                 before_t = t
-                before_v = v
                 before_b = b
             except TypeError:
                 continue
@@ -37,9 +34,9 @@ class BehaviorLoader:
         while (before_t < end_t):
             t = before_t
             if (before_t < t + datetime.timedelta(seconds=5)):
-                row = (before_t, (before_v, before_b)) # 最後のtをまだ登録していないので登録する
+                row = (before_t, before_b) # 最後のtをまだ登録していないので登録する
             else:
-                row = (before_t, (0.0, 0)) # 残りの時間は休息，速度ゼロで埋める
+                row = (before_t, 0) # 残りの時間は休息，速度ゼロで埋める
             revised_data.append(row)
             before_t += datetime.timedelta(seconds=1)
         self.data = pd.DataFrame(revised_data, columns=['Time', 'Data'])

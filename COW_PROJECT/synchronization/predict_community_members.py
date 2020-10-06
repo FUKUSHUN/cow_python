@@ -45,7 +45,7 @@ if __name__ == "__main__":
     dzeta = 12 # コミュニティ決定のパラメータ
     leng = 5 # コミュニティ決定のパラメータ
     start = datetime.datetime(2018, 10, 21, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 24, 0, 0, 0)
+    end = datetime.datetime(2018, 10, 22, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     change_point_file = "./synchronization/change_point/"
     output_file = "./synchronization/output/"
@@ -77,11 +77,12 @@ if __name__ == "__main__":
         interaction_graph_list = [graph for t, graph in analyzer.graph_list]
         graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
         for cow_id in target_list:
-            change_points, score_list = graph_analyzer.detect_change_point(cow_id, t_list)
-            df = pd.concat([pd.Series(t_list), pd.Series(score_list)], axis=1, names=["time", "score"])
-            df.to_csv("test.csv")
             graph_analyzer.visualize_graph(cow_id, t_list)
             pdb.set_trace()
+            change_points, score_list = graph_analyzer.detect_change_point(cow_id)
+            df = pd.concat([pd.Series(t_list), pd.Series(score_list)], axis=1, names=["time", "score"])
+            df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv")
+            # pdb.set_trace()
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
-        pdb.set_trace()
+        date += datetime.timedelta(days=1)

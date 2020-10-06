@@ -43,7 +43,7 @@ class CommunityCreater:
             delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)
             epsilon:    int     method="behavior"用の距離の閾値．単位はメートル
             dzeta:      int     method="position"用の距離の閾値．単位はメートル """
-        df, _, _ = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+        beh_df, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
         score_list = []
         K = len(self.cow_id_list)
         W = np.zeros([K,K]) # 重み付き行列．このメソッドの返却値
@@ -52,11 +52,11 @@ class CommunityCreater:
                 # インタラクションの決定法によって処理を分岐する
                 if (i < j):
                     if (method == "behavior"):
-                        score = self._calculate_behavior_synchronization(df, cow_id1, cow_id2, epsilon=epsilon)
+                        score = self._calculate_behavior_synchronization(beh_df, pos_df, cow_id1, cow_id2, epsilon=epsilon)
                     elif (method == "position"):
-                        score = self._calculate_position_synchronization(df, cow_id1, cow_id2, dzeta=dzeta)
+                        score = self._calculate_position_synchronization(pos_df, cow_id1, cow_id2, dzeta=dzeta)
                     elif (method == "distance"): # 重みと距離が反比例の関係にあるのでそのままではDBSCANにしか使えないことに注意
-                        score = self._calculate_average_distance(df, self.cow_id_list[i], self.cow_id_list[j])
+                        score = self._calculate_average_distance(pos_df, self.cow_id_list[i], self.cow_id_list[j])
                     score_list.append(score)
                     W[i,j] = score
                     W[j,i] = score
@@ -91,12 +91,11 @@ class CommunityCreater:
         # communities = dbscanner.create_community(W, self.cow_id_list)
         print("コミュニティを生成しました. ", start)
         print(communities)
-
         # --- 可視化を行う ---
         if (visualized_g):
             self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
         if (visualized_m):
-            _, _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+            _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
             self._visualize_community(pos_df, communities) # 動画描画
         if (focusing_cow_id is not None):
             community = None
@@ -112,41 +111,68 @@ class CommunityCreater:
             delta   : int. 単位は[s (個)]. この個数ごとに等間隔でデータをスライス """
         beh_df = self.behavior_synch.extract_df(start, end, delta)
         pos_df = self.position_synch.extract_df(start, end, delta)
-        merged_df = pd.concat([beh_df, pos_df], axis=1)
-        return merged_df, beh_df, pos_df
+        return beh_df, pos_df
 
-    def _calculate_behavior_synchronization(self, df, cow_id1, cow_id2, epsilon=30):
+    def _calculate_behavior_synchronization(self, beh_df, pos_df, cow_id1, cow_id2, epsilon=30):
         """ 行動同期スコアを計算する
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
         score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
-        df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
+        beh_df2 = beh_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
+        pos_df2 = pos_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
-        score = 0
-        for _, row in df2.iterrows():
-            row = list(row)
-            lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
-            dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
-            # 距離が閾値以内ならスコアを加算する
-            if (dis <= epsilon):
-                score += score_matrix[row[0][1],row[2][1]]
+        prop_vec_cow1 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id1)].values)
+        prop_vec_cow2 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id2)].values)
+        neighbor_time = self._measure_time_neighbor(pos_df2.loc[:, str(cow_id1)].values, pos_df2.loc[:, str(cow_id2)].values, threshold=10)
+        dist =  np.abs(prop_vec_cow1-prop_vec_cow2).sum() # 3次元空間内での2点の距離をマンハッタン距離で求める
+        score = neighbor_time * (2 - dist)
         return score
 
-    def _calculate_position_synchronization(self, df, cow_id1, cow_id2, dzeta=10):
+    def _measure_behavior_ratio(self, arraylist):
+        """ 行動割合を算出する """
+        behavior_0, behavior_1, behavior_2 = 0, 0, 0 # カウントアップ変数
+        # 各時刻の行動を順番に走査してカウント
+        for elem in arraylist:
+            if (elem == 0):
+                behavior_0 += 1
+            elif (elem == 1):
+                behavior_1 += 1
+            else:
+                behavior_2 += 1
+        length = len(arraylist)
+        proportion_b1 = behavior_0 / length
+        proportion_b2 = behavior_1 / length
+        proportion_b3 = behavior_2 / length
+        prop_vec = np.array([proportion_b1, proportion_b2, proportion_b3])
+        return prop_vec
+
+    def _measure_time_neighbor(self, arraylist1, arraylist2, threshold):
+        """ 2つの位置が閾値以内にある回数を数え上げる """
+        count = 0
+        # 各時刻の2頭の距離を算出する
+        for pos1, pos2 in zip(arraylist1, arraylist2):
+            lat1, lon1 = pos1[0], pos1[1]
+            lat2, lon2 = pos2[0], pos2[1]
+            dist, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            if (dist <= threshold):
+                count += 1
+        return count / len(arraylist1) # 全時刻のうちどれくらいの割合で近くにいたかを[0,1]の範囲で表す     
+
+    def _calculate_position_synchronization(self, pos_df, cow_id1, cow_id2, dzeta=10):
         """ 空間同期スコアを計算する 
             dzeta   : int. 単位は [m]. この距離以内の時間を計測する """
         dist_matrix = np.array([3, 6, dzeta])
         score_matrix = np.array([3, 2, 1, 0])
-        df2 = df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
+        df2 = pos_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
             lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
-            dis, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
-            if (dis <= dist_matrix[0]):
+            dist, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            if (dist <= dist_matrix[0]):
                 score += score_matrix[0]
-            elif (dis <= dist_matrix[1]):
+            elif (dist <= dist_matrix[1]):
                 score += score_matrix[1]
-            elif (dis <= dist_matrix[2]):
+            elif (dist <= dist_matrix[2]):
                 score += score_matrix[2]
         return score
 
