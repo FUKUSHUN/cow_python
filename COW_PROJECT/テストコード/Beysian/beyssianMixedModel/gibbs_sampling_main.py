@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import pdb # デバッグ用
 
 # 自作クラス
-import myClass.plotting as plotting
-import myClass.mixed_model as mixed_model
+import plotting as plotting
+import mixed_model as mixed_model
 
 # import os, sys
 # # 自作メソッド
@@ -14,6 +14,7 @@ import myClass.mixed_model as mixed_model
 # sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 # import behavior_classification.models.beysian.mixed_model as mixed_model2
 
+""" ポアソン混合モデルをギブスサンプリングによってサンプリングしクラスタリングするテストプログラム """
 
 def create_artificial_poissondata(lam, num):
     """ テスト用のデータセットを作成する
