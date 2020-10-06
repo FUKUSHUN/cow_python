@@ -3,9 +3,10 @@ import math
 import matplotlib.pyplot as plt
 
 # 自作クラス
-import myClass.gaussian_bayes as myGausse
-import myClass.plotting as plotting
+import gaussian_bayes as myGausse
+import plotting as plotting
 
+""" ベイズ線形回帰のテスト用プログラム """
 
 def create_artificial_data(coefficient_vector, random_varience, interval, scope):
     """ テスト用のデータセットを作成する
