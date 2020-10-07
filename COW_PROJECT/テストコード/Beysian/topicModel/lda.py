@@ -7,8 +7,8 @@ class GaussianLDA:
         D: Dimensionality of feature vector
         K: The number of topic
         N: The length of one-document's sequence
-        M: The number of documents in corpus
-        by Latent Topic Model Based on Gaussian-LDA for Audio Retrieval """
+        M: The total number of documents in corpus
+            by Latent Topic Model Based on Gaussian-LDA for Audio Retrieval """
     corpus: list # ドキュメント集合
     K: int # クラスタ数
     D: int # 特徴空間の次元数
@@ -59,12 +59,12 @@ class GaussianLDA:
                             tmp += sp.special.psi((self._nu[k] + 1 - i)/2)
                         lam[k] = (2 ** self.D) * np.linalg.det(self._W[k]) * tmp
                         r[n,k] = pi[k] * (lam[k] ** (1/2)) * np.exp(-1 * (self.D / (2 * self._beta[k])) - \
-                            (self._nu[k] / 2) * np.dot((x - self._m[k]).T, np.dot(self._W[k], (x - self._m[k]))))
-                # rをクラスタごとに正規化する
-                for k in range(self.K):
-                    sum_rk = sum(r[:,k])
-                    for n in range(len(d)):
-                        r[n,k] /= sum_rk
+                            (self._nu[k] / 2) * np.dot((x - self._m[k]).T, np.dot(self._W[k], (x - self._m[k])))) # responsibility
+                # rを正規化する
+                for n in range(len(d)):
+                    sum_rn = sum(r[n,:])
+                    for k in range(self.K):
+                        r[n,k] /= sum_rn
                 # --- M step ---
                 N = np.zeros(self.K)
                 x_bar = np.zeros((self.K, self.D))
@@ -97,3 +97,14 @@ class GaussianLDA:
             self._nu[k] = nu
             self._m[k] = m
             self._beta[k] = beta
+    
+    def _do_e_step(self):
+        """ Implements of caluculation in E step """
+
+
+    def _do_m_step(self):
+        """ Implements of caluculation in M step """
+
+
+    def _update_params(self):
+        """ update parameters """
