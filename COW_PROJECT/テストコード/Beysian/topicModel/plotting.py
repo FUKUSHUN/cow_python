@@ -6,113 +6,109 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import mpl_toolkits.mplot3d as mpl3d
 
-class PlotUtility:
-    fig:None
-    ax:None # 今のところ1行1列の図
-    color_table = ['black', 'blue','green','red','yellow','pink','orangered','orange','lime','deepskyblue','gold']
+class PlotMaker2D:
+    _xmin = 0
+    _xmax = 0
+    _ymin = 0
+    _ymax = 0
 
-    def __init__(self, fig = None, ax = None):
-        if (fig is None or ax is None):
-            self.fig = plt.figure()
-            self.ax = self.fig.add_subplot(111)
-        else:
-            self.fig = fig
-            self.ax = ax
+    def __init__(self, xmin, xmax, ymin, ymax, title="", xlabel="", ylabel="", figsize=(9.67, 9.67), dpi=100):
+        plt.figure(dpi=dpi, figsize=figsize) # definition of size and resolution
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        self._xmin = xmin
+        self._xmax = xmax
+        self._ymin = ymin
+        self._ymax = ymax
+        return
+    
+    def adjust_margin(self, top=None, bottom=None, right=None, left=None):
+        plt.subplots_adjust(left=left, right=right, bottom=bottom, top=top)
+        return
+    
+    def set_lim(self, x_axis:bool, y_axis:bool):
+        if (x_axis):
+            plt.xlim(self._xmin, self._xmax)
+        if (y_axis):
+            plt.ylim(self._ymin, self._ymax)
+        return
+    
+    def set_grid(self):
+        plt.grid()
+        return
 
+    def create_line_graph(self, x, y, marker=None, color=None, linestyle=None):
+        plt.plot(x,y,marker=marker, color=color, linestyle=linestyle)
+        return
 
-    def line_plot(self, t_list, v_list):
-        """ 横軸に時間，縦軸にセンサ値をプロットする
-        折れ線グラフ形式
-        Parameter
-            t_list  : 横軸の値のリスト
-            v_list  : 縦軸の値のリスト """
-        #グラフ化のための設定
-        #self.ax = self.fig.add_subplot(1,1,1) #4行1列の図
-        #ax1の設定
-        #self.ax.set_xticklabels(t_list, rotation=90, fontsize='small') #ラベルを回転・サイズ指定
-        #self.ax.xaxis.set_major_locator(mdates.AutoDateLocator()) #自動的にラベル表示の間隔を設定
-        self.ax.plot(t_list, v_list, 'b')
-        #self.ax.legend(("Velocity",), loc='upper left')
+    def create_scatter_plot(self, x, y, marker=None, color=None, size=None, color_bar=False, color_map='Blues', h_p=None, v_p=None):
+        if (h_p is not None):
+            plt.hlines(h_p, self._xmin, self._xmax, linestyle='dashed', linewidth=0.5)
+        if (v_p is not None):
+            plt.vlines(v_p, self._ymin, self._ymax, linestyle='dashed', linewidth=0.5)
 
+        plt.scatter(x, y, marker=marker, s=size, c=color, cmap=color_map)
+        if (color_bar):
+            plt.colorbar()
+        return
 
-    def scatter_plot(self, x_list, y_list, c_list, size=1):
-        """ 横軸に時間，縦軸にセンサ値をプロットする
-        散布図形式
-        Parameter
-            x_list  : 横軸の値のリスト
-            y_list  : 縦軸の値のリスト
-            c_list  : 色分けのリスト """
-        color_list = [self.color_table[c] for c in c_list]
-        x = np.array(x_list)
-        y = np.array(y_list)
-        c = np.array(color_list)
-        self.ax.scatter(x, y, c = c, s = size)
-
-
-    def scatter_time_plot(self, t_list, v_list, c_list, size=1):
-        """ 横軸に時間，縦軸にセンサ値をプロットする
-        散布図形式
-        Parameter
-            t_list  : 横軸の値のリスト
-            v_list  : 縦軸の値のリスト
-            c_list  : 色分けのリスト """
-        x_list = [i for i in range(len(t_list))]
-        color_list = [self.color_table[c] for c in c_list]
-        x = np.array(x_list)
-        y = np.array(v_list)
-        c = np.array(color_list)
-        self.ax.scatter(x, y, c = c, s = size)
-
-    def hist_plot(self, X, bins, color=None):
-        self.ax.hist(X, bins=bins, rwidth=0.95, color=color, stacked=True)
+    def create_bar_graph(self, left, height, width=0.8, color='blue', h_p=None):
+        plt.xticks(rotation=90) # rotation
+        if (h_p is not None):
+            plt.hlines(h_p, self._xmin, self._xmax, linestyle='dashed', linewidth=1)
+        plt.bar(left, height, width=width, color=color)
+        return
 
     def show(self):
         plt.show()
+        return
 
     def save_fig(self, filename):
         plt.savefig(filename)
+        return
 
-class PlotUtility3D:
+class PlotMaker3D:
     fig = None
-    ax = None # 今のところ1行1列の図
-    color_table = ['black', 'blue','green','red','yellow','pink','orangered','orange','lime','deepskyblue','gold']
+    ax = None
+    _xmin = 0
+    _xmax = 0
+    _ymin = 0
+    _ymax = 0
+    _zmin = 0
+    _zmax = 0
 
-    def __init__(self, fig = None, ax = None):
-        if (fig is None or ax is None):
-            self.fig = plt.figure()
-            self.ax = self.fig.add_subplot(111, projection='3d')
-        else:
-            self.fig = fig
-            self.ax = ax
+    def __init__(self, xmin, xmax, ymin, ymax, zmin, zmax, title="", xlabel="", ylabel="", zlabel="", figsize=(19.2, 9.67), dpi=100):
+        self.fig = plt.figure(figsize=figsize)
+        self.ax = self.fig.add_subplot(111, projection='3d')
+        self.ax.set_title(title)
+        self.ax.set_xlabel(xlabel)
+        self.ax.set_ylabel(ylabel)
+        self.ax.set_zlabel(zlabel)
+        self._xmin = xmin
+        self._xmax = xmax
+        self._ymin = ymin
+        self._ymax = ymax
+        self._zmin = zmin
+        self._zmax = zmax
+        return
 
-    def plot_scatter(self, x, y, z, c="#00aa00"):
+    def set_lim(self, x_axis:bool, y_axis:bool, z_axis:bool):
+        if (x_axis):
+            self.ax.set_xlim(self._xmin, self._xmax)
+        if (y_axis):
+            self.ax.set_ylim(self._ymin, self._ymax)
+        if (z_axis):
+            self.ax.set_zlim(self._zmin, self._zmax)
+        return
+
+    def create_scatter_plot(self, x, y, z, color="Blue"):
         """ 3次元散布図を作成する
         Parameter
             x, y, z : それぞれ各次元のリスト
-            c   : クラスタリング済みの場合は色分けを行う（デフォルトは一色）"""
-        # 軸ラベルの設定
-        self.ax.set_xlabel("First")
-        self.ax.set_ylabel("Second")
-        self.ax.set_zlabel("Third")
-
+            c   : 色名 (str) や16進数 (#00ff00), RGB (tuple([0, 1]の数値3次元)) での指定が可能（デフォルトは一色）"""
         # 散布図作成
-        self.ax.scatter3D(x, y, z, c=c)
-        self.ax.set_title("Scatter Plot")
+        self.ax.scatter3D(x, y, z, c=color)
         return
-
-    def plot_surface(self, x, y, z, c=0):
-        # 軸ラベルの設定
-        self.ax.set_xlabel("First")
-        self.ax.set_ylabel("Second")
-        self.ax.set_zlabel("Third")
-
-        # 散布図作成
-        self.ax.plot_surface(x, y, z, color=self.color_table[c], alpha=0.5, linewidth=0)
-        self.ax.set_title("Surface Plot")
-        return
-
     def show(self):
         plt.show()
-
-    def save_fig(self, filename):
-        plt.savefig(filename)
