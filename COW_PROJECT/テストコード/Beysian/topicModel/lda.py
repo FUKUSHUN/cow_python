@@ -42,14 +42,18 @@ class GaussianLDA:
             maxiter: int # 反復回数 """
         self._initialize_params(alpha, psi, nu, m, beta)
         for i in range(maxiter):
-            print(i, "回目の推論")
+            print(i+1, "回目の推論")
+            alpha, beta, nu, mm, W = self._alpha.copy(), self._beta.copy(), self._nu.copy(), self._m.copy(), self._W.copy()
+            W_inv = np.linalg.inv(W)
             for m, d in enumerate(self.corpus):
                 # --- E step ---
                 r = self._do_e_step(d, m)
                 # --- M step ---
                 N, x_bar, S = self._do_m_step(d, r)
                 # --- inference parameters ---
-                self._update_params(N, x_bar, S, m)
+                alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
+            self._update_params(alpha, beta, nu, mm, W_inv)
+            pdb.set_trace()
         return
 
     def _initialize_params(self, alpha, psi, nu, mm, beta):
@@ -61,15 +65,15 @@ class GaussianLDA:
             self._nu[k] = nu
             self._m[k] = mm
             self._beta[k] = beta
-        # sampling and first inference
-        # init_theta = np.random.dirichlet(alpha) # dirichlet
+        # random sampling and first inference
+        alpha, beta, nu, mm, W = self._alpha.copy(), self._beta.copy(), self._nu.copy(), self._m.copy(), self._W.copy()
+        W_inv = np.linalg.inv(W)
         for m, d in enumerate(self.corpus):
-            r = np.array([np.random.dirichlet(alpha) for _ in range(len(d))])
-            # init_Z = np.random.choice([i for i in range(self.K)],p=init_theta) # Categorical
-            # one_hot_Z = np.eye(self.K)[init_Z] # change into a one-hot vector
-            # r = np.tile(init_theta, (len(d),1)) # prepare Z for each word in document d
+            r = np.array([np.random.dirichlet(self._alpha[m]) for _ in range(len(d))])
             N, x_bar, S = self._do_m_step(d, r)
-            self._update_params(N, x_bar, S, m)
+            alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
+        # update parameters
+        self._update_params(alpha, np.array([1,1,1]), np.array([20, 20, 20]), mm, W_inv)
         return
 
     def _do_e_step(self, doc, m):
@@ -86,7 +90,6 @@ class GaussianLDA:
                 for i in range(self.D):
                     tmp += psi((self._nu[k] + 1 - i)/2)
                 lam[k] = (2 ** self.D) * np.linalg.det(self._W[k]) * tmp
-                pdb.set_trace()
                 r[n,k] = theta[k] * (lam[k] ** (1/2)) * np.exp(-1 * (self.D / (2 * self._beta[k])) -\
                      (self._nu[k] / 2) * np.dot((x - self._m[k]).T, np.dot(self._W[k], (x - self._m[k]))))
         # rを正規化する
@@ -113,16 +116,23 @@ class GaussianLDA:
             S[k] /= N[k]
         return N, x_bar, S
 
-    def _update_params(self, N, x_bar, S, m):
+    def _update_new_params(self, N, x_bar, S, m, alpha, beta, nu, mm, W_inv):
         """ update parameters """
         for k in range(self.K):
-            old_mk = self._m[k]
-            old_betak = self._beta[k]
-            self._alpha[m, k] += N[k]
-            self._beta[k] += N[k]
-            self._nu[k] += N[k]
-            self._m[k] = (1 / self._beta[k]) * (old_betak * self._m[k] + N[k] * x_bar[k])
-            W_inv = np.linalg.inv(self._W[k]) + N[k] * S[k] + \
+            old_betak = beta[k]
+            old_mk = mm[k]
+            alpha[m, k] += N[k]
+            beta[k] += N[k]
+            nu[k] += N[k]
+            mm[k] = (1 / beta[k]) * (old_betak * old_mk + N[k] * x_bar[k])
+            W_inv[k] = W_inv[k] + N[k] * S[k] + \
                 ((old_betak * N[k]) / (old_betak + N[k])) * np.dot((x_bar[k] - old_mk), (x_bar[k] - old_mk).T)
-            self._W[k] = np.linalg.inv(W_inv)
+        return alpha, beta, nu, mm, W_inv
+
+    def _update_params(self, alpha, beta, nu, mm, W_inv):
+        self._alpha = alpha
+        self._beta = beta
+        self._nu = nu
+        self._m = mm
+        self._W = np.linalg.inv(W_inv)
         return
