@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.special import psi
+from scipy.special import psi # ディガンマ関数
+from scipy.special import logsumexp # logsumexp
 import pdb # デバッグ用
 
 class GaussianLDA:
@@ -51,9 +52,12 @@ class GaussianLDA:
                 # --- M step ---
                 N, x_bar, S = self._do_m_step(d, r)
                 # --- inference parameters ---
-                alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
+                if (N is None):
+                    break
+                else:
+                    alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
             self._update_params(alpha, beta, nu, mm, W_inv)
-            pdb.set_trace()
+        pdb.set_trace()
         return
 
     def _initialize_params(self, alpha, psi, nu, mm, beta):
@@ -73,30 +77,32 @@ class GaussianLDA:
             N, x_bar, S = self._do_m_step(d, r)
             alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
         # update parameters
-        self._update_params(alpha, np.array([1,1,1]), np.array([20, 20, 20]), mm, W_inv)
+        self._update_params(alpha, beta, nu, mm, W_inv)
         return
 
     def _do_e_step(self, doc, m):
         """ Implements of the caluculation in E step """
         r = np.zeros((len(doc), self.K)) # responsibility
+        ln_r = np.zeros((len(doc), self.K)) # アンダーフローを防ぐためにログをとる
         # r[n,k] を求める
         for n in range(len(doc)):
             x = doc[n]
             theta = np.zeros(self.K) # <θk>
             lam = np.zeros(self.K) # precision matrix
             for k in range(self.K):
-                theta[k] = np.exp(psi(self._alpha[m,k]) - psi(sum(self._alpha[m,:])))
+                theta[k] = psi(self._alpha[m,k]) - psi(sum(self._alpha[m,:])) # 後でlogをとりexpが相殺されるのでexpをカット
                 tmp = 0
                 for i in range(self.D):
                     tmp += psi((self._nu[k] + 1 - i)/2)
-                lam[k] = (2 ** self.D) * np.linalg.det(self._W[k]) * tmp
-                r[n,k] = theta[k] * (lam[k] ** (1/2)) * np.exp(-1 * (self.D / (2 * self._beta[k])) -\
+                lam[k] = (2 ** self.D) * np.linalg.det(self._W[k]) * np.exp(tmp)
+                ln_r[n,k] = theta[k] + np.log(lam[k] ** (1/2)) + (-1 * (self.D / (2 * self._beta[k])) -\
                      (self._nu[k] / 2) * np.dot((x - self._m[k]).T, np.dot(self._W[k], (x - self._m[k]))))
         # rを正規化する
         for n in range(len(doc)):
-            sum_rn = sum(r[n,:])
+            sum_ln_rn = logsumexp(ln_r[n,:]) # logsumexp
             for k in range(self.K):
-                r[n,k] /= sum_rn
+                r[n,k] = np.exp(ln_r[n, k] - sum_ln_rn)
+        print(r)
         return r
 
     def _do_m_step(self, doc, r):
@@ -109,10 +115,13 @@ class GaussianLDA:
                 x = doc[n]
                 N[k] += r[n,k]
                 x_bar[k] += r[n,k] * x
-            x_bar[k] /= N[k]
+            if (N[k] != 0):
+                x_bar[k] /= N[k]
+            else:
+                return None, None, None
             for n in range(len(doc)):
                 x = doc[n]
-                S[k] = r[n,k] * np.dot((x - x_bar[k]), (x - x_bar[k]).T)
+                S[k] += r[n,k] * np.dot((x - x_bar[k]), (x - x_bar[k]).T)
             S[k] /= N[k]
         return N, x_bar, S
 
