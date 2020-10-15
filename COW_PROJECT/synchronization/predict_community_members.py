@@ -19,6 +19,7 @@ import synchronization.functions.utility as my_utility
 import synchronization.prediction_model.preprocess as prediction
 from synchronization.prediction_model.neural_network import LearnerForNeuralNetwork
 from synchronization.graph_operation.graph_series import GraphSeriesAnalysis
+from synchronization.set_operation.set_series import SetSeriesAnalysis
 
 from sklearn.metrics import (precision_score, recall_score, accuracy_score, f1_score, roc_curve, roc_auc_score) # for evaluation
 def test(clf, test_X:np.array, test_y:np.array):
@@ -46,11 +47,13 @@ if __name__ == "__main__":
     leng = 5 # コミュニティ決定のパラメータ
     start = datetime.datetime(2018, 10, 21, 0, 0, 0)
     end = datetime.datetime(2018, 10, 22, 0, 0, 0)
+    target_list = ['20113','20170','20295','20299']
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     change_point_file = "./synchronization/change_point/"
     output_file = "./synchronization/output/"
     date = start
-    target_list = ['20113','20170','20295','20299']
+    communities_list = []
+    interaction_graph_list = []
     while (date < end):
         s1 = time.time()
         t_list = []
@@ -65,23 +68,21 @@ if __name__ == "__main__":
             t_list.append(t)
             interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="behavior", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
-            community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, visualized_g=False, visualized_m=False, delta=delta_s, leng=leng) \
+            community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
-            analyzer.append_community([t, community])
-            analyzer.append_graph([t, interaction_graph])
+            com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id='20113', delta=delta_s) # 位置情報とコミュニティをプロット1
+            interaction_graph_list.append(interaction_graph)
+            communities_list.append(community)
             t += datetime.timedelta(minutes=delta_c)
         e1 = time.time()
         print("処理時間", (e1-s1)/60, "[min]")
-        # --- 次のコミュニティを予測する ---
+        # --- 変化点を検知する ---
         s2 = time.time()
-        interaction_graph_list = [graph for t, graph in analyzer.graph_list]
-        graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list)
+        set_analyzer = SetSeriesAnalysis(cow_id_list, communities_list)
         for cow_id in target_list:
-            graph_analyzer.visualize_graph(cow_id, t_list)
-            pdb.set_trace()
-            change_points, score_list = graph_analyzer.detect_change_point(cow_id)
-            df = pd.concat([pd.Series(t_list), pd.Series(score_list)], axis=1, names=["time", "score"])
-            df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv")
+            change_points = set_analyzer.detect_change_point(cow_id, t_list)
+            df = pd.concat([pd.Series(t_list), pd.Series(change_points)], axis=1, names=["time", "change_flag"])
+            df.to_csv("./synchronization/set_operation/"+ str(cow_id) + ".csv")
             # pdb.set_trace()
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")

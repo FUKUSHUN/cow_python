@@ -66,11 +66,9 @@ class CommunityCreater:
                     continue
         return W
 
-    def create_community(self, start, end, W:np.array, visualized_g=False, visualized_m=False, focusing_cow_id=None, delta=5, leng=5):
+    def create_community(self, start, end, W:np.array, delta=5, leng=5):
         """ インタラクショングラフを作成する, methodは複数用意する予定
             W:          np.array            : インタラクショングラフ（重み付きグラフの行列）
-            visualize_g, visualized_m: bool   : グラフ保存，動画保存をするか
-            focusing_cow_id : 指定があればこの牛のいるコミュニティのみを返却する
             delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている) 
             leng        int     過去の重み付きグラフの考慮数 """
         # --- 重みありグラフに対してLouvain法を適用してコミュニティを決定する（W: 重み付き）---
@@ -91,20 +89,15 @@ class CommunityCreater:
         # communities = dbscanner.create_community(W, self.cow_id_list)
         print("コミュニティを生成しました. ", start)
         print(communities)
-        # --- 可視化を行う ---
-        if (visualized_g):
-            self._visualize_graph(g, communities, start, weighted=True) # グラフ描画
-        if (visualized_m):
-            _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
-            self._visualize_community(pos_df, communities) # 動画描画
-        if (focusing_cow_id is not None):
-            community = None
-            for com in communities:
-                if (str(focusing_cow_id) in com):
-                    community = com
-                    break
-            return community # 指定がある場合はその牛が所属するコミュニティのみ返す
         return communities
+
+    def visualize_position(self, start, end, communities, target_cow_id=None, delta=5):
+        """ 位置情報をプロットする
+            target_cow_id : 指定があればこの牛のいるコミュニティの描画の色を固定する
+            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)  """
+        _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+        self._visualize_community(pos_df, communities, focusing_cow_id=target_cow_id) # 動画描画
+        return
 
     def _extract_and_merge_df(self, start, end, delta=5):
         """ startからendまでの時間のデータをdeltaごとにスライスして抽出し，行動，空間の2つのデータを結合する(どちらも1秒ごとに成形し，インデックスがTimeになっている前提)
@@ -116,7 +109,6 @@ class CommunityCreater:
     def _calculate_behavior_synchronization(self, beh_df, pos_df, cow_id1, cow_id2, epsilon=30):
         """ 行動同期スコアを計算する
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
-        score_matrix = np.array([[1,0,0], [0,3,0], [0,0,9]])
         beh_df2 = beh_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         pos_df2 = pos_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         # --- 行動同期スコアの計算（論文参照） --- 
@@ -227,7 +219,7 @@ class CommunityCreater:
         # 時間減衰を考慮し，重み付きグラフを足し合わせることでこのタイムスロットでのクラスタリングのための重み付きグラフを作成する
         leng = len(self.community_history) if len(self.community_history) < leng else leng # コミュニティ履歴がleng未満の時
         for i in range(leng):
-            zeta = math.e ** (-1 * i) / (i + 1) # 減衰率
+            zeta = (math.e ** (-1 * i)) / (i + 1) # 減衰率
             G += zeta * self.community_history[leng - i - 1]
         # 重みが負のエッジについてはゼロにリプレイス（重みの総和が0になることを防ぐため．そのまま負の重みをホールドさせた方が良いのかもしれない）
         for i in range(K):
@@ -266,8 +258,18 @@ class CommunityCreater:
         plt.savefig(save_path + date.strftime("%H%M.jpg"))
         return
 
-    def _visualize_community(self, df, communities:list):
-        """ 位置情報可視化動画を作成する """
+    def _visualize_community(self, df, communities:list, focusing_cow_id=None):
+        """ 位置情報可視化動画を作成する
+            communities: list   全頭のコミュニティリスト
+            focusing_cow_id: str    この牛の所属するコミュニティを先頭に配置することで色を固定する """
+        # focusing_cow_idのコミュニティの並び替え
+        if (focusing_cow_id is not None):
+            for i, community in enumerate(communities):
+                if (str(focusing_cow_id) in community):
+                    community = communities.pop(i)
+                    communities.insert(0, community)
+                    break
+        # 1頭ずつ色とキャプションを割り当てる
         caption_list = []
         color_list = []
         for cow_id in self.cow_id_list:

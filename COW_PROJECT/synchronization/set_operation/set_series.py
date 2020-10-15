@@ -3,6 +3,7 @@ import datetime
 import sys, os
 import numpy as np
 import pandas as pd
+import copy
 import pdb
 
 # my class
@@ -22,7 +23,6 @@ class SetSeriesAnalysis:
             target_cow_id: 変化点検知の対象とする牛の個体番号
             t_list: 時刻のリスト．インデックスに対応 """
         changepoint_list = [] # 変化点なら1, そうでなければ0
-        score_list = [] # グラフ類似度のスコアを格納
         community_series = self._extract_target_community(target_cow_id) # 注目する牛のコミュニティのみを各タイムスロットごとに抽出
         # --- 変化点検知を行う ---
         for i, community in enumerate(community_series):
@@ -30,8 +30,8 @@ class SetSeriesAnalysis:
                 changepoint_list.append(1) # 変化点となる時刻を格納する
                 previous_community = community
             else:
-                set_analyzer = SetAnalysis(community, previous_community)
-                is_changed = set_analyzer.compare_set()
+                set_analyzer = SetAnalysis(set(previous_community), set(community))
+                is_changed = set_analyzer.compare_set(rate=1/2)
                 if (is_changed):
                     changepoint_list.append(1)
                 else:
@@ -47,3 +47,4 @@ class SetSeriesAnalysis:
                 if (str(target_cow_id) in community):
                     ret.append(community)
         return ret
+
