@@ -44,7 +44,7 @@ def gaussian_mixed_model_test():
     # 文書集合の作成
     corpus1 = []
     for i in range(800):
-        numof_words = min(10, 1 + int(np.random.rand() * i)) # 単語数
+        numof_words = min(100, 1 + int(np.random.rand() * i)) # 単語数
         doc = np.zeros((numof_words, 2))
         np.random.shuffle(X1)
         for j in range(numof_words):
@@ -52,7 +52,7 @@ def gaussian_mixed_model_test():
         corpus1.append(doc)
     corpus2 = []
     for i in range(500):
-        numof_words = min(10, 1 + int(np.random.rand() * i)) # 単語数
+        numof_words = min(100, 1 + int(np.random.rand() * i)) # 単語数
         doc = np.zeros((numof_words, 2))
         np.random.shuffle(X2)
         for j in range(numof_words):
@@ -60,7 +60,7 @@ def gaussian_mixed_model_test():
         corpus2.append(doc)
     corpus3 = []
     for i in range(300):
-        numof_words = min(10, 1 + int(np.random.rand() * i)) # 単語数
+        numof_words = min(100, 1 + int(np.random.rand() * i)) # 単語数
         doc = np.zeros((numof_words, 2))
         np.random.shuffle(X3)
         for j in range(numof_words):
@@ -81,14 +81,14 @@ def gaussian_mixed_model_test():
     alpha = np.array([1, 1, 1]) # parameter for dirichlet
     psi = np.array([[0.1, 0], [0, 0.1]]) # parameter for Gaussian Wishert
     m = np.array([0.4, 0.4]) # parameter for Gaussian Wishert
-    nu = 20 # parameter for Gaussian Wishert
+    nu = 1 # parameter for Gaussian Wishert
     beta = 1 # parameter for Gaussian Wishert
-    max_iter = 10
+    max_iter = 500
 
     # ギブスサンプリングによるクラスタリング
     corpus = corpus1 + corpus2 + corpus3
     gaussian_lda = lda.GaussianLDA(corpus = random.sample(corpus, len(corpus)), num_topic=3, dimensionality=2)
-    gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
+    Z = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
     pdb.set_trace()
 
     # # 新たな入力に対する確率を推定
