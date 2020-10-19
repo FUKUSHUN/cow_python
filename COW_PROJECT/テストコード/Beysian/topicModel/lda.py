@@ -75,7 +75,7 @@ class GaussianLDA:
                 self._write_conv_log(i+1, dis)
                 self._write_params_log(i+1)
                 r_before = r.copy()
-            if (dis < 1):
+            if (dis < 0.1):
                 break
         # --- inference topic ---
         Z = np.zeros((self.M, self.K))
@@ -144,7 +144,8 @@ class GaussianLDA:
                 continue
             # S[k] を求める
             for n, x in enumerate(doc):
-                S[k] += r[n,k] * np.dot((x - x_bar[k]), (x - x_bar[k]).T)
+                diff = (x - x_bar[k]).reshape((2,1))
+                S[k] += r[n,k] * np.dot(diff, diff.T)
             if (N[k] != 0):
                 S[k] /= N[k]
             else:
@@ -160,8 +161,9 @@ class GaussianLDA:
             beta[k] += N[k]
             nu[k] += N[k]
             mm[k] = (1 / beta[k]) * (old_betak * old_mk + N[k] * x_bar[k])
+            diff = (x_bar[k] - old_mk).reshape((2,1))
             W_inv[k] = W_inv[k] + (N[k] * S[k]) + \
-                (((old_betak * N[k]) / (old_betak + N[k])) * np.dot((x_bar[k] - old_mk), (x_bar[k] - old_mk).T))
+                (((old_betak * N[k]) / (old_betak + N[k])) * np.dot(diff, diff.T))
         return alpha, beta, nu, mm, W_inv
 
     def _update_params(self, alpha, beta, nu, mm, W_inv):

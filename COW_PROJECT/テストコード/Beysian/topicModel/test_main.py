@@ -83,7 +83,7 @@ def gaussian_mixed_model_test():
     m = np.array([0.4, 0.4]) # parameter for Gaussian Wishert
     nu = 1 # parameter for Gaussian Wishert
     beta = 1 # parameter for Gaussian Wishert
-    max_iter = 500
+    max_iter = 2000
 
     # ギブスサンプリングによるクラスタリング
     corpus = corpus1 + corpus2 + corpus3
