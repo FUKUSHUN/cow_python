@@ -4,40 +4,19 @@ import datetime
 import numpy as np
 import pandas as pd
 import pdb
-from sklearn.model_selection import KFold
-from sklearn.model_selection import ShuffleSplit
 import pickle
 
-#自作クラス
+# 自作クラス
 os.chdir('../') # カレントディレクトリを一階層上へ
 print(os.getcwd())
 sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
 import synchronization.community_creater as community_creater
-import synchronization.community_analyzer as commnity_analyzer
-import synchronization.interaction_analyzer as interaction_analyzer
 import synchronization.functions.utility as my_utility
-import synchronization.prediction_model.preprocess as prediction
-from synchronization.prediction_model.neural_network import LearnerForNeuralNetwork
 from synchronization.graph_operation.graph_series import GraphSeriesAnalysis
 from synchronization.set_operation.set_series import SetSeriesAnalysis
 
-from sklearn.metrics import (precision_score, recall_score, accuracy_score, f1_score, roc_curve, roc_auc_score) # for evaluation
-def test(clf, test_X:np.array, test_y:np.array):
-    """ テストを行う
-        X: np.array(2D)
-        y: np.array(1D) """
-    pred_y, proba_y = predict(clf, test_X)
-    accuracy, precision, recall, f_measure, auc = accuracy_score(test_y, pred_y), precision_score(test_y, pred_y), \
-        recall_score(test_y, pred_y), f1_score(test_y, pred_y), roc_auc_score(test_y, proba_y[:,1])
-    return accuracy, precision, recall, f_measure, auc
-
-def predict(model, X:np.array):
-    """ 新しい入力に対して予測を行い，予測と予測確率を出力する
-        X: np.array(2D)
-        model: sklearn.base.ClassifierMixin """
-    y = model.predict(X)
-    y_proba = model.predict_proba(X)
-    return y, y_proba
+# 自作ライブラリ
+import synchronization.topic_model.make_session as make_session
 
 if __name__ == "__main__":
     delta_c = 2 # コミュニティの抽出間隔 [minutes]
@@ -59,7 +38,6 @@ if __name__ == "__main__":
         t_list = []
         cow_id_list = my_utility.get_existing_cow_list(date, cows_record_file)
         com_creater = community_creater.CommunityCreater(date, cow_id_list)
-        analyzer = commnity_analyzer.CommunityAnalyzer(cow_id_list) # 牛のリストに更新があるため、必ずSynchronizerの後にする
         # --- 行動同期を計測する ---
         t = date + datetime.timedelta(hours=12) # 正午12時を始まりとするが.......ときに9時始まりのときもある
         t_start = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
@@ -78,12 +56,17 @@ if __name__ == "__main__":
         print("処理時間", (e1-s1)/60, "[min]")
         # --- 変化点を検知する ---
         s2 = time.time()
+        behavior_synch = com_creater.get_behavior_synch()
         set_analyzer = SetSeriesAnalysis(cow_id_list, communities_list)
         for cow_id in target_list:
             change_points = set_analyzer.detect_change_point(cow_id, t_list)
             df = pd.concat([pd.Series(t_list), pd.Series(change_points)], axis=1, names=["time", "change_flag"])
             df.to_csv("./synchronization/set_operation/"+ str(cow_id) + ".csv")
-            # pdb.set_trace()
+            community_list = make_session.get_focused_community(communities_list, cow_id)
+            cow_id_session = make_session.process_time_series(t_list, community_list, change_points)
+            pdb.set_trace()
+            space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s)
+            pdb.set_trace()
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)

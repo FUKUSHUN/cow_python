@@ -57,23 +57,18 @@ class GaussianLDA:
         r_before = r.copy()
         for i in range(maxiter):
             print(i+1, "回目の推論")
-            alpha, beta, nu = self._alpha.copy(), self._beta.copy(), self._nu.copy()
-            z = np.zeros(self.K)
-            z_x = np.zeros((self.K, self.D))
-            z_xx = np.zeros((self.K, self.D, self.D))
+            alpha, beta, nu, mm, W = self._alpha.copy(), self._beta.copy(), self._nu.copy(), self._m.copy(), self._W.copy()
+            W_inv = np.linalg.inv(W)
             for m, d in enumerate(self.corpus):
                 # --- E step ---
                 r[m] = self._do_e_step(d, m, r)
                 # --- M step ---
-                _z, _z_x, _z_xx = self._do_m_step(d, r[m])
-                z += _z
-                z_x += _z_x
-                z_xx += _z_xx
+                N, x_bar, S = self._do_m_step(d, r[m])
                 # --- inference parameters ---
-                alpha = self._update_new_params(_z, m, alpha)
-            self._update_params(alpha, beta, nu, z, z_x, z_xx)
+                alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
+            self._update_params(alpha, beta, nu, mm, W_inv)
             # --- convergence check ---
-            if (i % 10 == 0):
+            if (i % 5 == 0):
                 dis = 0
                 for m in range(self.M):
                     dis += self._measure_L2_norm(r[m], r_before[m])
@@ -100,19 +95,14 @@ class GaussianLDA:
             self._m[k] = mm
             self._beta[k] = beta
         # random sampling and first inference
-        alpha, beta, nu = self._alpha.copy(), self._beta.copy(), self._nu.copy()
-        z = np.zeros(self.K)
-        z_x = np.zeros((self.K, self.D))
-        z_xx = np.zeros((self.K, self.D, self.D))
+        alpha, beta, nu, mm, W = self._alpha.copy(), self._beta.copy(), self._nu.copy(), self._m.copy(), self._W.copy()
+        W_inv = np.linalg.inv(W)
         for m, d in enumerate(self.corpus):
             r = np.array([np.random.dirichlet(self._alpha[m]) for _ in range(len(d))])
-            _z, _z_x, _z_xx = self._do_m_step(d, r)
-            z += _z
-            z_x += _z_x
-            z_xx += _z_xx
-            alpha = self._update_new_params(_z, m, alpha)
+            N, x_bar, S = self._do_m_step(d, r)
+            alpha, beta, nu, mm, W_inv = self._update_new_params(N, x_bar, S, m, alpha, beta, nu, mm, W_inv)
         # update parameters
-        self._update_params(alpha, beta, nu, z, z_x, z_xx)
+        self._update_params(alpha, beta, nu, mm, W_inv)
         return
 
     def _do_e_step(self, doc, m, r):
@@ -140,36 +130,49 @@ class GaussianLDA:
 
     def _do_m_step(self, doc, r):
         """ Implements of the caluculation in M step """
-        z = np.zeros(self.K)
-        z_x = np.zeros((self.K, self.D))
-        z_xx = np.zeros((self.K, self.D, self.D))
-        for n, x in enumerate(doc):
-            x_vec = x.reshape((2, 1))
-            for k in range(self.K):
-                z[k] += r[n,k]
-                z_x[k] += r[n,k] * x
-                z_xx[k] += r[n,k] * np.dot(x_vec, x_vec.T)
-        return z, z_x, z_xx
+        N = np.zeros(self.K) # <Zm,n>
+        x_bar = np.zeros((self.K, self.D))
+        S = np.zeros((self.K, self.D, self.D))
+        for k in range(self.K):
+            # N[k], x_bar[k] を求める
+            for n, x in enumerate(doc):
+                N[k] += r[n,k]
+                x_bar[k] += r[n,k] * x
+            if (N[k] != 0):
+                x_bar[k] /= N[k]
+            else:
+                continue
+            # S[k] を求める
+            for n, x in enumerate(doc):
+                diff = (x - x_bar[k]).reshape((2,1))
+                S[k] += r[n,k] * np.dot(diff, diff.T)
+            if (N[k] != 0):
+                S[k] /= N[k]
+            else:
+                continue
+        return N, x_bar, S
 
-    def _update_new_params(self, z, m, alpha):
+    def _update_new_params(self, N, x_bar, S, m, alpha, beta, nu, mm, W_inv):
         """ update parameters """
         for k in range(self.K):
-            alpha[m,k] += z[k]
-        return alpha
+            old_betak = beta[k].copy()
+            old_mk = mm[k].copy()
+            alpha[m, k] += N[k]
+            beta[k] += N[k]
+            nu[k] += N[k]
+            mm[k] = (1 / beta[k]) * (old_betak * old_mk + N[k] * x_bar[k])
+            diff = (x_bar[k] - old_mk).reshape((2,1))
+            W_inv[k] = W_inv[k] + (N[k] * S[k]) + \
+                (((old_betak * N[k]) / (old_betak + N[k])) * np.dot(diff, diff.T))
+        return alpha, beta, nu, mm, W_inv
 
-    def _update_params(self, alpha, beta, nu, z, z_x, z_xx):
+    def _update_params(self, alpha, beta, nu, mm, W_inv):
         """ 1回反復後に変分パラメータを更新する """
-        W_inv = np.zeros((self.K, self.D, self.D))
-        old_m = self._m.copy()
-        old_beta = self._beta.copy()
         self._alpha = alpha
-        self._beta = beta + z
-        self._nu = nu + z
+        self._beta = beta
+        self._nu = nu
+        self._m = mm
         for k in range(self.K):
-            self._m[k] = ((1 / self._beta[k]) * (z_x[k] + (old_beta[k] * old_m[k])))
-            old_mk = old_m[k].reshape((2,1))
-            new_mk = self._m[k].reshape((2,1))
-            W_inv[k] = z_xx[k] + old_beta[k] * np.dot(old_mk, old_mk.T) - self._beta[k] * np.dot(new_mk, new_mk.T) + np.linalg.inv(self._W[k])
             self._W[k] = np.linalg.inv(W_inv[k])
         return
 
