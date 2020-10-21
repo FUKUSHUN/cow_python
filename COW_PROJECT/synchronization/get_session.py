@@ -14,27 +14,30 @@ import synchronization.community_creater as community_creater
 import synchronization.functions.utility as my_utility
 from synchronization.graph_operation.graph_series import GraphSeriesAnalysis
 from synchronization.set_operation.set_series import SetSeriesAnalysis
+from synchronization.topic_model.lda import GaussianLDA
 
 # 自作ライブラリ
 import synchronization.topic_model.make_session as make_session
 import synchronization.topic_model.session_io as session_io
 
-if __name__ == "__main__":
-    delta_c = 2 # コミュニティの抽出間隔 [minutes]
-    delta_s = 5 # データのスライス間隔 [seconds] 
-    epsilon = 12 # コミュニティ決定のパラメータ
-    dzeta = 12 # コミュニティ決定のパラメータ
-    leng = 5 # コミュニティ決定のパラメータ
-    start = datetime.datetime(2018, 10, 21, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 22, 0, 0, 0)
-    target_list = ['20113','20170','20295','20299']
-    cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
-    change_point_file = "./synchronization/change_point/"
-    corpus_file = "./synchronization/topic_model/corpus/"
+
+delta_c = 2 # コミュニティの抽出間隔 [minutes]
+delta_s = 5 # データのスライス間隔 [seconds] 
+epsilon = 12 # コミュニティ決定のパラメータ
+dzeta = 12 # コミュニティ決定のパラメータ
+leng = 5 # コミュニティ決定のパラメータ
+start = datetime.datetime(2018, 10, 10, 0, 0, 0)
+end = datetime.datetime(2018, 10, 25, 0, 0, 0)
+target_list = ['20113','20170','20295','20299']
+cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
+change_point_file = "./synchronization/change_point/"
+corpus_file = "./synchronization/topic_model/corpus/"
+communities_list = []
+interaction_graph_list = []
+corpus = []
+
+def create_corpus():
     date = start
-    communities_list = []
-    interaction_graph_list = []
-    corpus = []
     while (date < end):
         s1 = time.time()
         t_list = []
@@ -68,7 +71,43 @@ if __name__ == "__main__":
             cow_id_session = make_session.process_time_series(t_list, community_list, change_points)
             space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s)
             corpus.extend(space_session)
-            session_io.write_session(space_session, corpus_file+cow_id+"/"+date.strftime("%Y%m%d/")) # test
+            session_io.write_session(space_session, corpus_file+cow_id + "/" + date.strftime("%Y%m%d/"))
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
+    return
+
+def load_corpus():
+    s1 = time.time()
+    global corpus
+    # --- ファイルを読み込みコーパスを作成する ---
+    date = start
+    while (date < end):
+        for cow_id in target_list:
+            space_session = session_io.read_session(corpus_file+cow_id + "/" + date.strftime("%Y%m%d/"))
+            corpus.extend(space_session)
+        date += datetime.timedelta(days=1)
+    e1 = time.time()
+    print("処理時間", (e1-s1)/60, "[min]")
+    return
+
+
+if __name__ == "__main__":
+    is_create = True
+    is_load = True
+    if (is_create):
+        create_corpus()
+    if (is_load):
+        load_corpus()
+
+    # LDAのハイパーパラメータ設定
+    alpha = np.array([1, 1, 1, 1]) # parameter for dirichlet
+    psi = np.array([[1, 0], [0, 1]]) # parameter for Gaussian Wishert
+    m = np.array([0.4, 0.4]) # parameter for Gaussian Wishert
+    nu = 1 # parameter for Gaussian Wishert
+    beta = 1 # parameter for Gaussian Wishert
+    max_iter = 3000
+
+    # ギブスサンプリングによるクラスタリング
+    gaussian_lda = GaussianLDA(corpus = corpus, num_topic=4, dimensionality=2)
+    Z = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)

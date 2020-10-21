@@ -20,7 +20,7 @@ class GaussianLDA:
     _nu: np.array # K次元ベクトル. ウィシャート分布の自由度パラメータ (> D-1. 最初はすべてのクラスタに同一のパラメータを与える)
     _m: np.array # K次元ベクトル × D次元ベクトルの行列. ガウス・ウィシャート分布のパラメータ
     _beta: np.array # K次元ベクトル. ガウス・ウィシャート分布のパラメータ (> 0. 最初はすべてのクラスタに同一のパラメータを与える)
-    _dir_name = "./"
+    _dir_name = "./synchronization/topic_model/"
     _convergence_logfile = _dir_name + "conv_log.txt"
     _parameters_logfile = _dir_name + "params_log.csv"
 
@@ -88,6 +88,7 @@ class GaussianLDA:
             topic = self._estimate_topic(d, m, r)
             Z[m] = topic.copy()
         self._write_params_log(maxiter)
+        pdb.set_trace()
         return Z
 
     def _initialize_params(self, alpha, psi, nu, mm, beta):

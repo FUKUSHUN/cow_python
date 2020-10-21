@@ -25,10 +25,8 @@ def read_session(dirpath):
     corpus = []
     files = glob.glob(dirpath + "*.csv")
     for filename in files:
-        with open(filename) as f:
-            reader = csv.reader(f)
-            corpus.append(reader)
-    return np.array(corpus)
+        corpus.extend(np.array([pd.read_csv(filename, header=None, usecols=[0,1]).values]))
+    return corpus
 
 def _confirm_dir(dir_path):
         """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
@@ -38,3 +36,8 @@ def _confirm_dir(dir_path):
             os.makedirs(dir_path)
             print("ディレクトリを作成しました", dir_path)
             return
+
+if __name__ == "__main__":
+    dir_path = "./corpus/20113/20181021/"
+    corpus = read_session(dir_path)
+    pdb.set_trace()
