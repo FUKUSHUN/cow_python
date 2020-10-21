@@ -32,17 +32,18 @@ target_list = ['20113','20170','20295','20299']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/change_point/"
 corpus_file = "./synchronization/topic_model/corpus/"
-communities_list = []
-interaction_graph_list = []
 corpus = []
 
 def create_corpus():
     date = start
     while (date < end):
         s1 = time.time()
+        communities_list = []
+        interaction_graph_list = []
         t_list = []
         cow_id_list = my_utility.get_existing_cow_list(date, cows_record_file)
         com_creater = community_creater.CommunityCreater(date, cow_id_list)
+        cow_id_list = com_creater.cow_id_list
         # --- 行動同期を計測する ---
         t = date + datetime.timedelta(hours=12) # 正午12時を始まりとするが.......ときに9時始まりのときもある
         t_start = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
