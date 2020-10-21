@@ -37,12 +37,11 @@ def exchange_cowid_to_space(id_session, behavior_synch, delta_c, delta_s):
     space_session = []
     for ses in id_session:
         space_expression = []
-        for key in id_session:
+        for key in ses:
             extracted_df = behavior_synch.extract_df(key, key+datetime.timedelta(minutes=delta_c), delta_s)
-            for cow_id in id_session[key]:
+            for cow_id in ses[key]:
                 prop_vec = _measure_behavior_ratio(extracted_df[cow_id].values)
                 space_expression.append(prop_vec)
-                pdb.set_trace()
         space_session.append(np.array(space_expression))
     return space_session
 

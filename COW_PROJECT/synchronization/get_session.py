@@ -17,6 +17,7 @@ from synchronization.set_operation.set_series import SetSeriesAnalysis
 
 # 自作ライブラリ
 import synchronization.topic_model.make_session as make_session
+import synchronization.topic_model.session_io as session_io
 
 if __name__ == "__main__":
     delta_c = 2 # コミュニティの抽出間隔 [minutes]
@@ -29,10 +30,11 @@ if __name__ == "__main__":
     target_list = ['20113','20170','20295','20299']
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     change_point_file = "./synchronization/change_point/"
-    output_file = "./synchronization/output/"
+    corpus_file = "./synchronization/topic_model/corpus/"
     date = start
     communities_list = []
     interaction_graph_list = []
+    corpus = []
     while (date < end):
         s1 = time.time()
         t_list = []
@@ -48,13 +50,13 @@ if __name__ == "__main__":
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
             community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
-            com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id='20113', delta=delta_s) # 位置情報とコミュニティをプロット1
+            # com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id='20113', delta=delta_s) # 位置情報とコミュニティをプロット1
             interaction_graph_list.append(interaction_graph)
             communities_list.append(community)
             t += datetime.timedelta(minutes=delta_c)
         e1 = time.time()
         print("処理時間", (e1-s1)/60, "[min]")
-        # --- 変化点を検知する ---
+        # --- 変化点を検知し，セッションを作る ---
         s2 = time.time()
         behavior_synch = com_creater.get_behavior_synch()
         set_analyzer = SetSeriesAnalysis(cow_id_list, communities_list)
@@ -64,9 +66,9 @@ if __name__ == "__main__":
             df.to_csv("./synchronization/set_operation/"+ str(cow_id) + ".csv")
             community_list = make_session.get_focused_community(communities_list, cow_id)
             cow_id_session = make_session.process_time_series(t_list, community_list, change_points)
-            pdb.set_trace()
             space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s)
-            pdb.set_trace()
+            corpus.extend(space_session)
+            session_io.write_session(space_session, corpus_file+cow_id+"/"+date.strftime("%Y%m%d/")) # test
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
