@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import mpl_toolkits.mplot3d as mpl3d
+import math
+import pdb
 
 class PlotMaker2D:
     _xmin = 0
@@ -112,3 +114,41 @@ class PlotMaker3D:
         return
     def show(self):
         plt.show()
+
+
+if __name__ == "__main__":
+    beta = np.array([8.24853498e+07, 1.11542649e+08, 3.72355777e+07])
+    m = np.array([[0.14598122, 0.21648961], [0.40219225, 0.30129823], [0.30594259, 0.58127577]])
+    nu = np.array([8.24853498e+07, 1.11542649e+08, 3.72355777e+07])
+    W = np.array([[[1.86993649*(10**-6), -2.43005831*(10**-6)], [-2.43005831*(10**-6), 6.64427680*(10**-6)]],\
+                    [[1.63108638*(10**-6), -7.02456611*(10**-7)], [-7.02456611*(10**-7), 1.72586475*(10**-6)]],\
+                    [[5.04790981*(10**-6), -1.00129009*(10**-6)], [-1.00129009*(10**-6), 2.85946316*(10**-6)]]])
+
+    # 事後分布から予測分布のパラメータを導出
+    K = len(beta)
+    D = len(m.T)
+    mu = np.zeros((K, D))
+    lam = np.zeros((K, D, D))
+    nu_hat = np.zeros(K)
+    for k in range(K):
+        mu[k] = m[k]
+        lam[k] = ((1 - D + nu[k]) * beta[k] / (1 + beta[k])) * W[k]
+        nu_hat[k] = 1 - D + nu[k]
+
+    # 分布の等高線を描く
+    N = 100
+    x = np.linspace(0, 1, N)
+    y = np.linspace(0, 1, N)
+    X, Y = np.meshgrid(x, y)
+    Z = np.zeros((K, N, N))
+    for k in range(K):
+        temp1 = np.exp(math.lgamma((nu_hat[k] + D) / 2) - math.lgamma(nu_hat[k] / 2))
+        temp2 = np.linalg.det(lam[k]) ** (1 / 2) / ((np.pi * nu_hat[k]) ** (D / 2))
+        for i in range(N):
+            for j in range(N):
+                x_vec = np.array([[x[i] - mu[k, 0]], [y[j] - mu[k, 1]]])
+                temp3 = (1 + np.dot(x_vec.T, np.dot(lam[k], x_vec)) / nu_hat[k]) ** (-(nu_hat[k] + D) / 2)
+                Z[k, i, j] = temp1 * temp2 * temp3
+        plt.contour(X, Y, Z[k])
+        plt.gca().set_aspect('equal')
+    plt.show()
