@@ -1,4 +1,5 @@
 import csv
+import math # ガンマ関数
 import numpy as np
 from scipy.special import psi # ディガンマ関数
 from scipy.special import logsumexp # logsumexp
@@ -206,3 +207,54 @@ class GaussianLDA:
         for k in range(self.K):
             topic[k] /= sum_topic
         return topic
+
+    def set_params(self, beta, m, nu, W):
+        """ パラメータを設定する (いきなり予測するとき，事前分布を与えたいときに使用する) """
+        self._beta = beta
+        self._m = m
+        self._nu = nu
+        self._W = W
+        return
+    
+    def predict(self, new_corpus, theta):
+        topic_dist_list = []
+        for new_doc in new_corpus:
+            topic_dist = self._predict_doc(new_doc, theta)
+            topic_dist_list.append(topic_dist)
+        return topic_dist_list
+
+    def _predict_doc(self, new_doc, theta):
+        """ 新しい文書に対してトピックを予測する """
+        topic_dist = np.zeros(self.K)
+        for new_x in new_doc:
+            topic_dist += self._predict_word(new_x, theta)
+        sum_topic = sum(topic_dist)
+        for k in range(self.K):
+            topic_dist[k] /= sum_topic
+        return topic_dist
+
+    def _predict_word(self, new_x, theta):
+        """ 新しい単語に対してトピックを予測する
+            new_x   : 新しい文書中の新しい単語
+            theta   : 各トピックの出現確率のベクトル
+            Return
+            topic_dist: K次元ベクトル．トピック分布 """
+        mu = np.zeros((self.K, self.D))
+        lam = np.zeros((self.K, self.D, self.D))
+        nu_hat = np.zeros(self.K)
+        for k in range(self.K):
+            mu[k] = self._m[k]
+            lam[k] = ((1 - self.D + self._nu[k]) * self._beta[k] / (1 + self._beta[k])) * self._W[k]
+            nu_hat[k] = 1 - self.D + self._nu[k]
+
+        topic_dist = np.zeros(self.K)
+        for k in range(self.K):
+            temp1 = np.exp(math.lgamma((nu_hat[k] + self.D) / 2) - math.lgamma(nu_hat[k] / 2))
+            temp2 = np.linalg.det(lam[k]) ** (1 / 2) / ((np.pi * nu_hat[k]) ** (self.D / 2))
+            x_vec = np.array((new_x - mu[k]).reshape((2, 1)))
+            temp3 = (1 + np.dot(x_vec.T, np.dot(lam[k], x_vec)) / nu_hat[k]) ** (-(nu_hat[k] + self.D) / 2)
+            topic_dist[k] = theta[k] * (temp1 * temp2 * temp3)
+        sum_topic = sum(topic_dist)
+        for k in range(self.K):
+            topic_dist /= sum_topic
+        return topic_dist

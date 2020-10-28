@@ -94,7 +94,7 @@ def load_corpus():
 
 
 if __name__ == "__main__":
-    is_create = True
+    is_create = False
     is_load = True
     if (is_create):
         create_corpus()
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     m = np.array([0.4, 0.4]) # parameter for Gaussian Wishert
     nu = 1 # parameter for Gaussian Wishert
     beta = 1 # parameter for Gaussian Wishert
-    max_iter = 3000
+    max_iter = 10000
 
     # ギブスサンプリングによるクラスタリング
     gaussian_lda = GaussianLDA(corpus = corpus, num_topic=4, dimensionality=2)
