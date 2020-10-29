@@ -16,11 +16,11 @@ class GaussianLDA:
     K: int # クラスタ数
     D: int # 特徴空間の次元数
     M: int # corpusにあるドキュメントの数
-    _alpha: np.array # M個のドキュメント × K次元ベクトルの行列．ディリクレ分布のパラメータ (最初はすべてのドキュメントに同一のパラメータを与える)
-    _W: np.array # K次元ベクトル × D×D行列の行列ウィシャート分布のパラメータ (最初はすべてのクラスタに同一のパラメータを与える)
-    _nu: np.array # K次元ベクトル. ウィシャート分布の自由度パラメータ (> D-1. 最初はすべてのクラスタに同一のパラメータを与える)
+    _alpha: np.array # M個のドキュメント × K次元ベクトルの行列．ディリクレ分布のパラメータ
+    _W: np.array # K次元ベクトル × D×D行列の行列ウィシャート分布のパラメータ
+    _nu: np.array # K次元ベクトル. ウィシャート分布の自由度パラメータ (> D-1.)
     _m: np.array # K次元ベクトル × D次元ベクトルの行列. ガウス・ウィシャート分布のパラメータ
-    _beta: np.array # K次元ベクトル. ガウス・ウィシャート分布のパラメータ (> 0. 最初はすべてのクラスタに同一のパラメータを与える)
+    _beta: np.array # K次元ベクトル. ガウス・ウィシャート分布のパラメータ (> 0.)
     _dir_name = "./synchronization/topic_model/"
     _convergence_logfile = _dir_name + "conv_log.txt"
     _parameters_logfile = _dir_name + "params_log.csv"
@@ -44,11 +44,11 @@ class GaussianLDA:
 
     def inference(self, alpha, psi, nu, m, beta, maxiter):
         """ 推論を行う (モデルのfit)
-            alpha: np.array # K次元ベクトル．ディリクレ分布のパラメータ (最初はすべてのドキュメントに同一のパラメータを与える)
-            psi: np.array # D×D行列の行列ウィシャート分布のパラメータの初期値 (最初はすべてのクラスタに同一のパラメータを与える)
-            nu: int # ウィシャート分布の自由度パラメータの初期値 (> D-1. 最初はすべてのクラスタに同一のパラメータを与える)
-            m: np.array # ガウス・ウィシャート分布のハイパーパラメータ (最初はすべてのクラスタに同一のパラメータを与える)
-            beta: float # ガウス・ウィシャート分布のハイパーパラメータ (最初はすべてのクラスタに同一のパラメータを与える)
+            alpha: np.array # K次元ベクトル．ディリクレ分布のパラメータ
+            psi: np.array # D×D行列の行列ウィシャート分布のパラメータの初期値
+            nu: int # ウィシャート分布の自由度パラメータの初期値 (> D-1.)
+            m: np.array # ガウス・ウィシャート分布のハイパーパラメータ (> 0)
+            beta: float # ガウス・ウィシャート分布のハイパーパラメータ
             maxiter: int # 反復回数 """
         self._initialize_params(alpha, psi, nu, m, beta)
         max_N = 0
@@ -84,23 +84,26 @@ class GaussianLDA:
             if (dis < 0.1):
                 break
         # --- inference topic ---
+        theta = np.zeros(self.K)
         Z = np.zeros((self.M, self.K))
         for m, d in enumerate(self.corpus):
             topic = self._estimate_topic(d, m, r)
             Z[m] = topic.copy()
+            theta += self._alpha[m]
+        sum_theta = sum(theta)
+        for k in range(self.K):
+            theta[k] /= sum_theta
         self._write_params_log(maxiter)
         pdb.set_trace()
-        return Z
+        return Z, theta
 
     def _initialize_params(self, alpha, psi, nu, mm, beta):
         # initialization
-        for m in range(self.M):
-            self._alpha[m] = alpha
-        for k in range(self.K):
-            self._W[k] = psi
-            self._nu[k] = nu
-            self._m[k] = mm
-            self._beta[k] = beta
+        self._alpha = alpha
+        self._W = psi
+        self._nu = nu
+        self._m = mm
+        self._beta = beta
         # random sampling and first inference
         alpha, beta, nu = self._alpha.copy(), self._beta.copy(), self._nu.copy()
         z = np.zeros(self.K)
@@ -189,7 +192,7 @@ class GaussianLDA:
         with open(self._parameters_logfile, mode='a', newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["num of iteration", i])
-            writer.writerow(["alpha", self._alpha])
+            writer.writerow(["whole_alpha", [sum(self._alpha[:,k]) for k in range(self.K)]])
             writer.writerow(["beta", self._beta])
             writer.writerow(["m", self._m])
             writer.writerow(["nu", self._nu])
@@ -217,6 +220,7 @@ class GaussianLDA:
         return
     
     def predict(self, new_corpus, theta):
+        """ 新しいコーパス全体に対してそれぞれの文書ごとにトピック分布を算出する """
         topic_dist_list = []
         for new_doc in new_corpus:
             topic_dist = self._predict_doc(new_doc, theta)

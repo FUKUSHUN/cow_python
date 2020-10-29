@@ -96,19 +96,34 @@ def load_corpus():
 if __name__ == "__main__":
     is_create = False
     is_load = True
+    is_learn = False
     if (is_create):
         create_corpus()
     if (is_load):
         load_corpus()
+    if (is_learn):
+        # LDAのハイパーパラメータ設定
+        M = len(corpus)
+        K = 5
+        alpha = np.array([[1, 1, 1, 1, 1] for _ in range(M)]) # parameter for dirichlet
+        psi = np.array([[[1, 0], [0, 1]] for _ in range(K)]) # parameter for Gaussian Wishert
+        m = np.array([[0.4, 0.4] for _ in range(K)]) # parameter for Gaussian Wishert
+        nu = [1 for _ in range(K)] # parameter for Gaussian Wishert
+        beta = [1 for _ in range(K)] # parameter for Gaussian Wishert
+        max_iter = 10000
 
-    # LDAのハイパーパラメータ設定
-    alpha = np.array([1, 1, 1, 1]) # parameter for dirichlet
-    psi = np.array([[1, 0], [0, 1]]) # parameter for Gaussian Wishert
-    m = np.array([0.4, 0.4]) # parameter for Gaussian Wishert
-    nu = 1 # parameter for Gaussian Wishert
-    beta = 1 # parameter for Gaussian Wishert
-    max_iter = 10000
-
-    # ギブスサンプリングによるクラスタリング
-    gaussian_lda = GaussianLDA(corpus = corpus, num_topic=4, dimensionality=2)
-    Z = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
+        # ギブスサンプリングによるクラスタリング
+        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=5, dimensionality=2)
+        Z, theta = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
+    else:
+        beta = np.array([2.45588208e+08, 3.51298287e+08, 9.61739581e+07, 5.52268965e+07])
+        m = np.array([[0.03790016, 0.51848817], [0.96946281, 0.02607957], [0.51939128, 0.38355043], [0.41411002, 0.3472917 ]])
+        nu = np.array([2.45588208e+08, 3.51298287e+08, 9.61739581e+07, 5.52268965e+07])
+        W = np.array([[[3.60925103e-07, 3.30189813e-08], [3.30189813e-08, 7.23063347e-08]], \
+                        [[4.98883105e-06, 6.00508380e-06], [6.00508380e-06, 8.10231361e-06]], \
+                            [[8.79716239e-07, 9.21349490e-07], [9.21349490e-07, 1.15480923e-06]], \
+                                [[5.43788951e-07, 5.52752497e-07], [5.52752497e-07, 9.38091458e-07]]])
+        theta = np.array([])
+        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=5, dimensionality=2)
+        gaussian_lda.set_params(beta, m, nu, W)
+        result = gaussian_lda.predict(corpus, theta)
