@@ -25,7 +25,7 @@ def read_session(dirpath):
     corpus = []
     files = glob.glob(dirpath + "*.csv")
     for filename in files:
-        corpus.extend(np.array([pd.read_csv(filename, header=None, usecols=[0,1]).values]))
+        corpus.extend(np.array([pd.read_csv(filename, header=None, usecols=[0,1]).values])) # 歩行クラスタは不使用
     return corpus
 
 def _confirm_dir(dir_path):

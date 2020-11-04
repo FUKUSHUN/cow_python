@@ -64,7 +64,7 @@ class GaussianLDA:
             z_xx = np.zeros((self.K, self.D, self.D))
             for m, d in enumerate(self.corpus):
                 # --- E step ---
-                r[m] = self._do_e_step(d, m, r)
+                r[m] = self._do_e_step(d, m, max_N)
                 # --- M step ---
                 _z, _z_x, _z_xx = self._do_m_step(d, r[m])
                 z += _z
@@ -91,10 +91,8 @@ class GaussianLDA:
             Z[m] = topic.copy()
             theta += self._alpha[m]
         sum_theta = sum(theta)
-        for k in range(self.K):
-            theta[k] /= sum_theta
+        theta /= sum_theta # 正規化
         self._write_params_log(maxiter)
-        pdb.set_trace()
         return Z, theta
 
     def _initialize_params(self, alpha, psi, nu, mm, beta):
@@ -110,7 +108,7 @@ class GaussianLDA:
         z_x = np.zeros((self.K, self.D))
         z_xx = np.zeros((self.K, self.D, self.D))
         for m, d in enumerate(self.corpus):
-            r = np.array([np.random.dirichlet(self._alpha[m]) for _ in range(len(d))])
+            r = self._do_e_step(d, m, len(d))
             _z, _z_x, _z_xx = self._do_m_step(d, r)
             z += _z
             z_x += _z_x
@@ -120,7 +118,7 @@ class GaussianLDA:
         self._update_params(alpha, beta, nu, z, z_x, z_xx)
         return
 
-    def _do_e_step(self, doc, m, r):
+    def _do_e_step(self, doc, m, N):
         """ Implements of the caluculation in E step """
         ln_r = np.zeros((len(doc), self.K)) # アンダーフローを防ぐためにログをとる
         theta = np.zeros(self.K) # <θk>
@@ -136,12 +134,13 @@ class GaussianLDA:
                 ln_r[n,k] = theta[k] + np.log(lam[k] ** (1/2)) + (-1 * (self.D / (2 * self._beta[k])) -\
                      (self._nu[k] / 2) * np.dot((x - self._m[k]).T, np.dot(self._W[k], (x - self._m[k]))))
         # rを正規化する
+        r = np.zeros((N, self.K))
         for n in range(len(doc)):
             sum_ln_rn = logsumexp(ln_r[n,:]) # logsumexp
             for k in range(self.K):
-                r[m,n,k] = np.exp(ln_r[n,k] - sum_ln_rn)
+                r[n,k] = np.exp(ln_r[n,k] - sum_ln_rn)
         # print(r)
-        return r[m]
+        return r
 
     def _do_m_step(self, doc, r):
         """ Implements of the caluculation in M step """
@@ -203,12 +202,11 @@ class GaussianLDA:
     def _estimate_topic(self, doc, m, r):
         """ トピックを推定する """
         topic = np.zeros(self.K)
-        r[m] = self._do_e_step(doc, m, r)
+        r[m] = self._do_e_step(doc, m, len(r.T))
         for k in range(self.K):
             topic[k] = sum(r[m,:,k])
         sum_topic = sum(topic)
-        for k in range(self.K):
-            topic[k] /= sum_topic
+        topic /= sum_topic # 正規化
         return topic
 
     def set_params(self, beta, m, nu, W):
@@ -233,8 +231,7 @@ class GaussianLDA:
         for new_x in new_doc:
             topic_dist += self._predict_word(new_x, theta)
         sum_topic = sum(topic_dist)
-        for k in range(self.K):
-            topic_dist[k] /= sum_topic
+        topic_dist /= sum_topic # 正規化
         return topic_dist
 
     def _predict_word(self, new_x, theta):
@@ -259,6 +256,5 @@ class GaussianLDA:
             temp3 = (1 + np.dot(x_vec.T, np.dot(lam[k], x_vec)) / nu_hat[k]) ** (-(nu_hat[k] + self.D) / 2)
             topic_dist[k] = theta[k] * (temp1 * temp2 * temp3)
         sum_topic = sum(topic_dist)
-        for k in range(self.K):
-            topic_dist /= sum_topic
+        topic_dist /= sum_topic # 正規化
         return topic_dist
