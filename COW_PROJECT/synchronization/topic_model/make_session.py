@@ -69,10 +69,12 @@ def restore_time_series(time_series, change_points, additional_info):
     additional_info_time_series = []
     for info in additional_info:
         info_time_series = []
-        i = 0 # info (arraylike) のインデックス
+        i = -1 # info (arraylike) のインデックス
         for _, is_changed in zip(time_series, change_points):
             if (is_changed):
                 i += 1
+                if (i == len(info)):
+                    break
                 info_time_series.append(info[i])
             else:
                 info_time_series.append(info[i])

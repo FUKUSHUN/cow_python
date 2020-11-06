@@ -27,7 +27,7 @@ epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 5 # コミュニティ決定のパラメータ
 start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-end = datetime.datetime(2018, 10, 10, 0, 0, 0)
+end = datetime.datetime(2018, 10, 30, 0, 0, 0)
 target_list = ['20113','20170','20295','20299']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/change_point/"
@@ -132,11 +132,13 @@ def predict_session(gaussian_lda, theta):
             cow_id_session = make_session.process_time_series(t_list, community_list, change_points)
             space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s, dim=2)
             topic_dist = gaussian_lda.predict(space_session, theta) # 予測結果．各トピックの分布で現れる
-            result = np.where(topic_dist==max(topic_dist))[0][0] # 最も予測確率が高いものをトピックに据える
+            result = []
+            for p in topic_dist:
+                result.append(np.where(p==max(p))[0][0]) # 最も予測確率が高いものをトピックに据える
             time_series_result = make_session.restore_time_series(t_list, change_points, [topic_dist, result]) # 結果を時系列データに直す
-            df = pd.concat([df, pd.DataFrame(time_series_result, columns=["topic_dist", "topic"])])
-            df.to_csv("./synchronization/set_operation/"+ str(cow_id) + ".csv")
-            pdb.set_trace()
+            df = pd.concat([df, pd.DataFrame(time_series_result[0]), pd.Series(time_series_result[1])], axis=1)
+            session_io._confirm_dir(change_point_file+str(cow_id)) # ディレクトリのパスを作る
+            df.to_csv(change_point_file+str(cow_id)+date.strftime("/%Y%m%d.csv"))
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
@@ -144,7 +146,7 @@ def predict_session(gaussian_lda, theta):
 
 if __name__ == "__main__":
     is_create = False
-    is_load = True
+    is_load = False
     is_learn = False
     if (is_create):
         corpus = []
@@ -172,15 +174,15 @@ if __name__ == "__main__":
         Z, theta = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
         result = gaussian_lda.predict(corpus, theta)
     else:
-        beta = np.array([6.85110703e+08, 1.05511992e+09, 2.35658659e+08, 1.41584940e+08, 2.30210528e+08])
-        m = np.array([[0.0168134, 0.49485071], [0.97943516, 0.01868553], [0.28869599, 0.59634904], [0.29941286, 0.39345673], [0.67838774, 0.241999]])
-        nu = np.array([6.85110703e+08, 1.05511992e+09, 2.35658659e+08, 1.41584940e+08, 2.30210528e+08])
-        W = np.array([[[3.73512784e-07, 1.69779886e-08], [1.69779886e-08, 2.85138486e-08]], \
-                    [[5.05955252e-06, 5.67102212e-06], [5.67102212e-06, 6.96904853e-06]], \
-                        [[3.42327177e-07, 3.24412304e-07], [3.24412304e-07, 3.75268994e-07]], \
-                            [[2.58528836e-07, 1.90666739e-07], [1.90666739e-07, 2.80431611e-07]], \
-                                [[4.90882946e-07, 4.63907573e-07], [4.63907573e-07, 6.17471018e-07]]])
-        theta = np.array([0.2918224 , 0.44942569, 0.10038089, 0.06031073, 0.09806029])
+        beta = np.array([1.05669156e+09, 2.13276228e+08, 2.14682579e+08, 7.26673544e+08, 1.36360834e+08])
+        m = np.array([[0.97754441, 0.01987148], [0.29367018, 0.56291046], [0.67696687, 0.24723722], [0.02296877, 0.50454176], [0.39541451, 0.36614583]])
+        nu = np.array([1.05669156e+09, 2.13276228e+08, 2.14682579e+08, 7.26673544e+08, 1.36360834e+08])
+        W = np.array([[[3.12971170e-06, 3.65023628e-06], [3.65023628e-06, 4.77065779e-06]],\
+                        [[2.63659347e-07, 2.35619748e-07], [2.35619748e-07, 2.87111953e-07]], \
+                            [[5.15136665e-07, 5.09762336e-07], [5.09762336e-07, 6.83040306e-07]], \
+                                [[2.34470246e-07, 1.39159975e-08], [1.39159975e-08, 2.54139520e-08]], \
+                                    [[2.38485200e-07, 2.06301212e-07], [2.06301212e-07, 3.24740050e-07]]])
+        theta = np.array([0.450009512 , 0.09084722, 0.09144625, 0.30952585, 0.05808556])
         gaussian_lda = GaussianLDA(corpus = corpus, num_topic=5, dimensionality=2)
         gaussian_lda.set_params(beta, m, nu, W)
         result = gaussian_lda.predict(corpus, theta)
