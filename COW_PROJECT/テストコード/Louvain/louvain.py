@@ -9,7 +9,7 @@ class Visualizer:
 
     def visualize_graph(self, X, filename):
         """ インタラクショングラフを描画する """
-        save_path = "./test/"
+        save_path = "./"
         g = self._exchange_X(X)
         num_nodes = len(g.nodes)
 

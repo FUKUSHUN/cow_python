@@ -158,7 +158,7 @@ class CommunityCreater:
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
-            lat1, lon1, lat2, lon2 = row[1][0], row[1][1], row[3][0], row[3][1]
+            lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
             dist, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
             if (dist <= dist_matrix[0]):
                 score += score_matrix[0]
@@ -331,3 +331,21 @@ class CommunityCreater:
     def get_position_synch(self):
         """ position_synchはロードに時間がかかるので使いまわす """
         return self.position_synch
+
+    def get_community_graph(self, communities):
+        """ リスト形式のコミュニティ集合を隣接行列形式で表現し直して返す """
+        N = len(self.cow_id_list)
+        graph = np.zeros((N, N))
+        for i, cow_id in enumerate(self.cow_id_list):
+            com = []
+            for community in communities:
+                if (str(cow_id) in community):
+                    com = community
+                    break
+            for j, cow_id2 in enumerate(self.cow_id_list):
+                if (str(cow_id2) in com):
+                    graph[i,j] = 1
+                else:
+                    graph[i,j] = 0
+        return graph
+
