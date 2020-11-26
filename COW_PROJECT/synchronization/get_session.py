@@ -26,8 +26,8 @@ delta_s = 5 # データのスライス間隔 [seconds]
 epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 5 # コミュニティ決定のパラメータ
-start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-end = datetime.datetime(2018, 10, 30, 0, 0, 0)
+start = datetime.datetime(2018, 9, 19, 0, 0, 0)
+end = datetime.datetime(2018, 12, 30, 0, 0, 0)
 target_list = ['20113','20170','20295','20299']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/change_point/"
@@ -56,7 +56,7 @@ def create_corpus():
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
             community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
-            com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id='20170', delta=delta_s) # 位置情報とコミュニティをプロット1
+            # com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id='20170', delta=delta_s) # 位置情報とコミュニティをプロット1
             community_graph = com_creater.get_community_graph(community)
             interaction_graph_list.append(interaction_graph)
             communities_list.append(community)
@@ -69,13 +69,13 @@ def create_corpus():
         behavior_synch = com_creater.get_behavior_synch()
         # set_analyzer = SetSeriesAnalysis(cow_id_list, communities_list)
         graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list, "Poisson")
-        for cow_id in target_list:
+        for cow_id in cow_id_list:
             if (cow_id in cow_id_list):
                 # change_points = set_analyzer.detect_change_point(cow_id, t_list)
-                graph_analyzer.visualize_graph(cow_id, t_list) # グラフをまとめて可視化
-                change_points, score_list = graph_analyzer.detect_change_point(cow_id, 5, 5) # 変化点検知
-                df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1, names=["time", "score", "change_flag"])
-                df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv") # csvで保存
+                # graph_analyzer.visualize_graph(cow_id, t_list) # グラフをまとめて可視化
+                change_points, score_list = graph_analyzer.detect_change_point(cow_id, 5, 5, threshold=450) # 変化点検知
+                # df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1, names=["time", "score", "change_flag"])
+                # df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv") # csvで保存
                 community_list = make_session.get_focused_community(communities_list, cow_id) # セッションを作成するために対象牛の所属するコミュニティを抽出
                 cow_id_session = make_session.process_time_series(t_list, community_list, change_points) # 牛IDでセッションを作成
                 space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s) # 特徴表現でセッションを作成
@@ -84,7 +84,6 @@ def create_corpus():
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
-        pdb.set_trace()
     return
 
 def load_corpus():
@@ -159,6 +158,7 @@ if __name__ == "__main__":
     if (is_create):
         corpus = []
         create_corpus()
+        pdb.set_trace()
     if (is_load):
         corpus = []
         load_corpus()

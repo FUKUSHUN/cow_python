@@ -158,7 +158,10 @@ class CommunityCreater:
         # --- 行動同期スコアの計算（論文参照） --- 
         score = 0
         for _, row in df2.iterrows():
-            lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
+            try:
+                lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
+            except TypeError:
+                pdb.set_trace()
             dist, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
             if (dist <= dist_matrix[0]):
                 score += score_matrix[0]
