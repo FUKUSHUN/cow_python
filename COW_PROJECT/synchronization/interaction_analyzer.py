@@ -33,30 +33,30 @@ class InteractionAnalyzer:
             Return
                 features: 特徴のリスト """
         # 自分の牛のデータのみを抽出
-        beh_df, pos_df = self._extract_and_merge_df(start, end, delta=5)
+        both_df, beh_df, pos_df = self._extract_and_merge_df(start, end, delta=5)
         # 時間特徴
         time_interval = (end - start).total_seconds() / 60 # 単位を分にする
         # 行動特徴
-        my_beh_df = beh_df[str(self.cow_id)]
-        behavior_ratio = self._measure_behavior_ratio(my_beh_df.values)
+        my_beh_df = beh_df[[str(self.cow_id)]]
+        behavior_ratio = self._measure_behavior_ratio(my_beh_df)
         # 距離特徴
         my_pos_df = pos_df[[str(self.cow_id)]]
         total_distance = self._measure_mileage(my_pos_df)
         # 最も距離の近かった牛（平均）との距離
         community_union = self._get_community_union(communities)
         minimum_dist_cow, minimum_dist = self._find_minimun_distance(pos_df, community_union)
-        # community_size_list, synchron_ratio_list = [], []
-        # time = start
-        # for community in communities:
-        #     # コミュニティサイズ
-        #     community_size_list.append(len(community))
-        #     # 同期度
-        #     used_df, _, _ = self._extract_and_merge_df(time, time+datetime.timedelta(minutes=delta_c), delta=5)
-        #     synchron_ratio_list.append(self._measure_synchronization_ratio(used_df, community, epsilon=12))
-        #     time += datetime.timedelta(minutes=delta_c)
-        # community_size = sum(community_size_list) / len(community_size_list)
-        # synchron_ratio = sum(synchron_ratio_list) / len(synchron_ratio_list)
-        features = [time_interval, total_distance, behavior_ratio[0], behavior_ratio[1], behavior_ratio[2], minimum_dist_cow, minimum_dist]
+        community_size_list, synchron_ratio_list = [], []
+        time = start
+        for community in communities:
+            # コミュニティサイズ
+            community_size_list.append(len(community))
+            # 同期度
+            used_df, _, _ = self._extract_and_merge_df(time, time+datetime.timedelta(minutes=delta_c), delta=5)
+            synchron_ratio_list.append(self._measure_synchronization_ratio(used_df, community, epsilon=12))
+            time += datetime.timedelta(minutes=delta_c)
+        community_size = sum(community_size_list) / len(community_size_list)
+        synchron_ratio = sum(synchron_ratio_list) / len(synchron_ratio_list)
+        features = [time_interval, total_distance, synchron_ratio, behavior_ratio['rest'], behavior_ratio['graze'], behavior_ratio['walk'], community_size, minimum_dist_cow, minimum_dist]
         # self._visualize_adjectory(pos_df, [str(self.cow_id), str(minimum_dist_cow)])
         return features
 
@@ -65,32 +65,31 @@ class InteractionAnalyzer:
             delta   : int. 単位は[s (個)]. この個数ごとに等間隔でデータをスライス """
         beh_df = self.behavior_synch.extract_df(start, end, delta)
         pos_df = self.position_synch.extract_df(start, end, delta)
-        return beh_df, pos_df
+        merged_df = pd.concat([beh_df, pos_df], axis=1)
+        return merged_df, beh_df, pos_df
 
-    def _measure_behavior_ratio(self, arraylist):
+    def _measure_behavior_ratio(self, df):
         """ 行動割合を算出する """
         behavior_0, behavior_1, behavior_2 = 0, 0, 0 # カウントアップ変数
         # 各時刻の行動を順番に走査してカウント
-        # 各時刻の行動を順番に走査してカウント
-        for elem in arraylist:
-            if (elem == 0):
+        for _, row in df.iterrows():
+            if (row[0][1] == 0):
                 behavior_0 += 1
-            elif (elem == 1):
+            elif (row[0][1] == 1):
                 behavior_1 += 1
             else:
                 behavior_2 += 1
-        length = len(arraylist)
-        proportion_b1 = behavior_0 / length
-        proportion_b2 = behavior_1 / length
-        proportion_b3 = behavior_2 / length
-        prop_vec = np.array([proportion_b1, proportion_b2, proportion_b3])
-        return prop_vec
+        proportion = {}
+        proportion["rest"] = behavior_0 / (behavior_0 + behavior_1 + behavior_2)
+        proportion["graze"] = behavior_1 / (behavior_0 + behavior_1 + behavior_2)
+        proportion["walk"] = behavior_2 / (behavior_0 + behavior_1 + behavior_2)
+        return proportion
 
-    def _measure_mileage(self, pos_df):
+    def _measure_mileage(self, df):
         """ 総移動距離（各時刻の移動距離の総和）を算出する """
         mileage = 0
         before_lat, before_lon = None, None
-        for _, row in pos_df.iterrows():
+        for _, row in df.iterrows():
             lat, lon = row[0][0], row[0][1]
             if ((before_lat is not None) and (before_lon is not None)):
                 dis, _ = geography.get_distance_and_direction(before_lat, before_lon, lat, lon, True)
@@ -120,16 +119,16 @@ class InteractionAnalyzer:
         else: # コミュニティメンバが自分だけのとき
             return 0
 
-    def _find_minimun_distance(self, pos_df, community):
+    def _find_minimun_distance(self, df, community):
         """ 最も総距離の短い牛との間の距離の平均を求める """
         minimum_dist_cow, minimum_dist = None, 100000
         if (len(community) == 1):
             return "None", 0 # コミュニティメンバがいない場合は欠損値扱い
         else:
-            my_df = pos_df[[str(self.cow_id)]]
+            my_df = df[[str(self.cow_id)]]
             for cow_id in community:
                 if (cow_id != str(self.cow_id)):
-                    opponent_df = pos_df[[str(cow_id)]]
+                    opponent_df = df[[str(cow_id)]]
                     merged_df = pd.concat([my_df, opponent_df], axis=1)
                     sum_dis = 0
                     for _, row in merged_df.iterrows():
@@ -139,11 +138,11 @@ class InteractionAnalyzer:
                     if(sum_dis < minimum_dist):
                         minimum_dist = sum_dis
                         minimum_dist_cow = cow_id
-            return minimum_dist_cow, minimum_dist / len(pos_df) # 1データ当たりの距離の平均を算出
+            return minimum_dist_cow, minimum_dist / len(df) # 1データ当たりの距離の平均を算出
 
-    def _visualize_adjectory(self, pos_df, community):
+    def _visualize_adjectory(self, df, community):
         """ 軌跡描画を行う
-            pos_df: pd.DataFrame    pos_df  
+            df: pd.DataFrame    pos_df  
             community: list self.cow_idを含む牛のコミュニティメンバのリスト """
         caption_list = []
         color_list = []
@@ -158,7 +157,7 @@ class InteractionAnalyzer:
             else:
                 caption_list.append("") # キャプションを表示しない
                 color_list.append(1)
-        new_df = pos_df[community] # communityを使ってdfから必要な要素を抽出
+        new_df = df[community] # communityを使ってdfから必要な要素を抽出
         maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
         maker.make_adjectory(new_df)
         return
