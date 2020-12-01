@@ -26,8 +26,8 @@ delta_s = 5 # データのスライス間隔 [seconds]
 epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 5 # コミュニティ決定のパラメータ
-start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-end = datetime.datetime(2018, 10, 30, 0, 0, 0)
+start = datetime.datetime(2018, 9, 1, 0, 0, 0)
+end = datetime.datetime(2018, 12, 31, 0, 0, 0)
 target_list = ['20113','20170','20295','20299']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/change_point/"
@@ -83,10 +83,12 @@ def make_features():
                         community_series, graph_series = _extract_community(t_list, community_list, interaction_graph_list, start_point, end_point)
                         features = inte_analyzer.extract_feature(start_point, end_point, community_series, delta_c=delta_c)
                         ave_dence = calculate_average_graph_density(community_series, graph_series, cow_id_list)
-                        feature_list.append([start_point, ave_dence, features[2], features[0]*features[4]])
+                        ave_iso = calculate_average_graph_isolation(community_series, graph_series, cow_id_list)
+                        # 開始時刻, 平均密度, 平均孤立度, 非休息割合, セッション長
+                        feature_list.append([start_point, ave_dence, ave_iso, 1 - features[2], features[0]])
                     except KeyError:
                         pdb.set_trace()
-                pd.DataFrame(feature_list).to_csv(change_point_file + "test.csv")
+                my_utility.write_values(change_point_file + str(cow_id) + ".csv", feature_list)
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
@@ -167,6 +169,33 @@ def _calculate_graph_density(W):
     # 完全グラフの時の辺の数で割り密度を算出する
     density = count / (K * (K-1) / 2) if 1 < K else 0
     return density
+
+def calculate_average_graph_isolation(community_series, graph_series, cow_id_list):
+    """ コミュニティのグラフ全体に対する孤立度を求める """
+    isolation_list = []
+    for community, graph in zip(community_series, graph_series):
+        index_list = [cow_id_list.index(str(cow_id)) for cow_id in community] # インタラクショングラフの何行目かのインデックス
+        index_list = sorted(index_list)
+        formed_graph_out = _form_graph2(graph, index_list)
+        M = np.sum(formed_graph_out) / 2
+        formed_graph_in = _form_graph(graph, index_list)
+        m = np.sum(formed_graph_in) / 2
+        if (M != 0):
+            iso = m / M
+        else:
+            iso = 1 # 自分しかコミュニティにいない場合M=0となる．この場合，孤立度は1 (最大)
+        isolation_list.append(iso)
+    return sum(isolation_list) / len(isolation_list)
+
+def _form_graph2(graph, index_list):
+    """ index_listにある行列のみ値を保持したグラフを生成する """
+    N = len(graph)
+    ret_graph = np.zeros((N, N))
+    for i in range(N):
+        for j in range(N):
+            if (i in index_list or j in index_list):
+                ret_graph[i,j] = graph[i,j]
+    return ret_graph
 
 if __name__ == '__main__':
     make_features()
