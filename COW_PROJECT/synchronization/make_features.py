@@ -25,12 +25,12 @@ delta_c = 2 # コミュニティの抽出間隔 [minutes]
 delta_s = 5 # データのスライス間隔 [seconds] 
 epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
-leng = 5 # コミュニティ決定のパラメータ
-start = datetime.datetime(2018, 9, 1, 0, 0, 0)
-end = datetime.datetime(2018, 12, 31, 0, 0, 0)
-target_list = ['20113','20170','20295','20299']
+leng = 1 # コミュニティ決定のパラメータ
+start = datetime.datetime(2019, 4, 2, 0, 0, 0)
+end = datetime.datetime(2019, 6, 10, 0, 0, 0)
+target_list = ['20113','20127','20170','20283','20299','20303']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
-change_point_file = "./synchronization/change_point/"
+change_point_file = "./synchronization/estrus_detection/"
 
 def make_features():
     """ 特徴を作成し各セッションを分析する """
