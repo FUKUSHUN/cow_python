@@ -150,11 +150,11 @@ def predict_session(gaussian_lda, theta):
                 graph_analyzer = GraphSeriesAnalysis(cow_id_list, interaction_graph_list, "Poisson")
                 # graph_analyzer.visualize_graph(cow_id, t_list) # グラフをまとめて可視化
                 change_points, score_list = graph_analyzer.detect_change_point(cow_id, 5, 5, threshold=400) # 変化点検知
-                # df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1, names=["time", "score", "change_flag"])
+                df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1, names=["time", "score", "change_flag"])
                 # df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv") # csvで保存
                 community_list = make_session.get_focused_community(communities_list, cow_id) # セッションを作成するために対象牛の所属するコミュニティを抽出
                 cow_id_session = make_session.process_time_series(t_list, community_list, change_points) # 牛IDでセッションを作成
-                space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s) # 特徴表現でセッションを作成
+                space_session = make_session.exchange_cowid_to_space(cow_id_session, behavior_synch, delta_c, delta_s, dim=2) # 特徴表現でセッションを作成
                 topic_dist = gaussian_lda.predict(space_session, theta) # 予測結果．各トピックの分布で現れる
                 result = [np.where(p==max(p))[0][0] for p in topic_dist] # 最も予測確率が高いものをトピックに据える
                 time_series_result = make_session.restore_time_series(t_list, change_points, [topic_dist, result]) # 結果を時系列データに直す
