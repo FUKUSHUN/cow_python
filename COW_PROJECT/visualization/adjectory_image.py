@@ -5,7 +5,7 @@ import numpy as np
 
 class Adjectory:
     image:Image.Image
-    __size = (633, 537) # (width, height)
+    __size = (633, 557) # (width, height)
     __top_left = (34.88328, 134.86187) # (latitude, longitude)
     __bottom_right = (34.88207, 134.86357) # (latitude, longitude)
 
