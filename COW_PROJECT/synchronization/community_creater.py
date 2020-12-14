@@ -99,6 +99,14 @@ class CommunityCreater:
         self._visualize_community(pos_df, communities, focusing_cow_id=target_cow_id) # 動画描画
         return
 
+    def visualize_adjectory(self, start, end, cow_id_list, target_cow_id=None, delta=5):
+        """ 軌跡情報をプロットする
+            target_cow_id : 指定があればこの牛の軌跡の描画色を変更する
+            delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)  """
+        _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
+        self._visualize_adjectory(pos_df, cow_id_list, focusing_cow_id=target_cow_id)
+        return
+
     def _extract_and_merge_df(self, start, end, delta=5):
         """ startからendまでの時間のデータをdeltaごとにスライスして抽出し，行動，空間の2つのデータを結合する(どちらも1秒ごとに成形し，インデックスがTimeになっている前提)
             delta   : int. 単位は[s (個)]. この個数ごとに等間隔でデータをスライス """
@@ -281,41 +289,26 @@ class CommunityCreater:
                     caption_list.append(str(cow_id) + ":" + str(i))
                     color_list.append(i)
                     break
-        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, is_lined=True)
         maker.make_movie(df, disp_adj=False)
         return
 
-    def _visualize_adjectory(self, df, communities, focusing_cow_id=None):
+    def _visualize_adjectory(self, df, cow_id_list, focusing_cow_id=None):
         """ 軌跡描画を行う
-            focusing_cow_id: str  Noneのときは全コミュニティを描画，指定ありの場合は当該コミュニティのみを描画 """
+            cow_id_list: list       軌跡を描画する牛の個体番号リスト
+            focusing_cow_id: str    Noneのときは全コミュニティを描画，指定ありの場合はその牛のみ別の色で描画 """
         caption_list = []
         color_list = []
-        if (focusing_cow_id is None):
-            for cow_id in self.cow_id_list:
-                for i, com in enumerate(communities):
-                    if (cow_id in com):
-                        caption_list.append("")
-                        color_list.append(i)
-                        break
-            maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list)
-            maker.make_adjectory(df)
-        else:
-            community = [] # focusing_cow_idが所属するコミュニティを格納する
-            for com in communities:
-                if (focusing_cow_id in com):
-                    community = com
-                    break
-            community = sorted(community)
-            for cow_id in community:
-                if (cow_id == focusing_cow_id):
-                    caption_list.append("") # キャプションを表示しない
-                    color_list.append(0)
-                else:
-                    caption_list.append("") # キャプションを表示しない
-                    color_list.append(1)
-            new_df = df[community] # communityを使ってdfから必要な要素を抽出
-            maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
-            maker.make_adjectory(new_df)
+        for cow_id in cow_id_list:
+            if (cow_id == focusing_cow_id):
+                caption_list.append("") # キャプションを表示しない
+                color_list.append(1)
+            else:
+                caption_list.append("") # キャプションを表示しない
+                color_list.append(0)
+        new_df = df[cow_id_list] # communityを使ってdfから必要な要素を抽出
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
+        maker.make_adjectory(new_df)
         return
 
     def _confirm_dir(self, dir_path):
