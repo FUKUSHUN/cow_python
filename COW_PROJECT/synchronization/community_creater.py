@@ -289,7 +289,7 @@ class CommunityCreater:
                     caption_list.append(str(cow_id) + ":" + str(i))
                     color_list.append(i)
                     break
-        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, is_lined=True)
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename="movie/", is_lined=True)
         maker.make_movie(df, disp_adj=False)
         return
 
@@ -307,8 +307,9 @@ class CommunityCreater:
                 caption_list.append("") # キャプションを表示しない
                 color_list.append(0)
         new_df = df[cow_id_list] # communityを使ってdfから必要な要素を抽出
-        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, image_filename=str(focusing_cow_id)+"/")
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename="adjectory/"+str(focusing_cow_id)+"/", image_filename="adjectory/"+str(focusing_cow_id)+"/")
         maker.make_adjectory(new_df)
+        maker.make_movie(new_df, frame_rate=20.0, disp_adj=True)
         return
 
     def _confirm_dir(self, dir_path):

@@ -95,8 +95,8 @@ class PlotMaker:
     is_lined: bool # ノード同士を線で結ぶかどうか
 
     def __init__(self, caption_list=None, color_list=None, video_filename="", image_filename="", is_lined=False):
-        self.video_filename = "./visualization/movie/" + video_filename
-        self.image_filename = "./visualization/adjectory/" + image_filename
+        self.video_filename = "./visualization/" + video_filename
+        self.image_filename = "./visualization/" + image_filename
         size = cv2.imread("./visualization/image/background.jpg").shape
         self.height = size[0]
         self.width = size[1]
@@ -104,14 +104,14 @@ class PlotMaker:
         self.color_list = color_list
         self.is_lined = is_lined
 
-    def make_movie(self, df:pd.DataFrame, disp_adj=False):
+    def make_movie(self, df:pd.DataFrame, frame_rate=10.0, disp_adj=False):
         """ 動画を作成する
             df  : position_information.synchronizer.Synchoronizer.cows_dataの形式
             disp_adj    : bool 軌跡を更新表示するかどうかのフラグ """
         # 画像の系列の取得
         images = self._make_sequence_images(df, "video", disp_adj)
         fourcc = cv2.VideoWriter_fourcc('m','p','4','v')
-        video  = cv2.VideoWriter(self.video_filename, fourcc, 10.0, (self.width, self.height))
+        video  = cv2.VideoWriter(self.video_filename, fourcc, frame_rate, (self.width, self.height))
         # 画像を繋げて動画にする
         for img in images:
             video.write(img)
@@ -198,4 +198,5 @@ if __name__ == "__main__":
     interaction_graph = com_creater.make_interaction_graph(start_t, end_t, method="position", delta=delta_s, epsilon=epsilon, dzeta=dzeta)
     community_list = com_creater.create_community(start_t, end_t, interaction_graph, delta=delta_s, leng=leng)
     community = [com for com in community_list if target_cow_id in com][0]
-    com_creater.visualize_adjectory(start_t, end_t, community, target_cow_id=target_cow_id, delta=delta_s)
+    com_creater.visualize_adjectory(start_t, end_t, community, target_cow_id=target_cow_id, delta=delta_s) # 軌跡をプロット
+    # com_creater.visualize_position(start_t, end_t, community, target_cow_id=target_cow_id, delta=delta_s) # 位置情報とコミュニティをプロット
