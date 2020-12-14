@@ -192,17 +192,17 @@ class GaussianLDA:
             writer = csv.writer(f)
             writer.writerow(["num of iteration", i])
             writer.writerow(["whole_alpha", [sum(self._alpha[:,k]) for k in range(self.K)]])
-            writer.writerow(["beta", self._beta])
-            writer.writerow(["m", self._m])
-            writer.writerow(["nu", self._nu])
-            writer.writerow(["W", self._W])
+            writer.writerow(["beta", [beta for beta in self._beta]])
+            writer.writerow(["m", [list(m_k) for m_k in self._m]])
+            writer.writerow(["nu", [nu for nu in self._nu]])
+            writer.writerow(["W", [[list(w_k[0]), list(w_k[1])] for w_k in self._W]])
             writer.writerow(["\n"])
         return
 
     def _estimate_topic(self, doc, m, r):
         """ トピックを推定する """
         topic = np.zeros(self.K)
-        r[m] = self._do_e_step(doc, m, len(r.T))
+        r[m] = self._do_e_step(doc, m, len(r[m]))
         for k in range(self.K):
             topic[k] = sum(r[m,:,k])
         sum_topic = sum(topic)
@@ -254,7 +254,8 @@ class GaussianLDA:
             temp2 = np.linalg.det(lam[k]) ** (1 / 2) / ((np.pi * nu_hat[k]) ** (self.D / 2))
             x_vec = np.array((new_x - mu[k]).reshape((2, 1)))
             temp3 = (1 + np.dot(x_vec.T, np.dot(lam[k], x_vec)) / nu_hat[k]) ** (-(nu_hat[k] + self.D) / 2)
-            topic_dist[k] = theta[k] * (temp1 * temp2 * temp3)
+            # topic_dist[k] = theta[k] * (temp1 * temp2 * temp3)
+            topic_dist[k] = temp1 * temp2 * temp3 # トピックの出現確率を考慮しない
         sum_topic = sum(topic_dist)
         topic_dist /= sum_topic # 正規化
         return topic_dist

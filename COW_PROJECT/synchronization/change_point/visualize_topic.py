@@ -60,7 +60,7 @@ if __name__ == "__main__":
     target_cow_id_list = ['20113', '20170', '20295', '20299']
     start = datetime.datetime(2018, 10, 1, 0, 0, 0)
     end = datetime.datetime(2018, 10, 30, 0, 0, 0)
-    usecols = [3, 4, 5, 6, 7, 8]
+    usecols = [4, 5, 6, 7, 8, 9]
     names = ['topic=1', 'topic=2', 'topic=3', 'topic=4', 'topic=5', 'topic_num']
     for cow_id in target_cow_id_list:
         curr_dir = dir_path + cow_id + '/'
@@ -72,5 +72,7 @@ if __name__ == "__main__":
                 df = pd.read_csv(csv_file, usecols=usecols, names=names)
                 plot_by_day(df, usecols, names, fig_file)
             except pd.errors.ParserError:
+                plot_exception(names, fig_file)
+            except FileNotFoundError:
                 plot_exception(names, fig_file)
             date += datetime.timedelta(days=1)
