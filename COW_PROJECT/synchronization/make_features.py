@@ -26,9 +26,9 @@ delta_s = 5 # データのスライス間隔 [seconds]
 epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 1 # コミュニティ決定のパラメータ
-start = datetime.datetime(2019, 4, 2, 0, 0, 0)
-end = datetime.datetime(2019, 6, 10, 0, 0, 0)
-target_list = ['20113','20127','20170','20283','20299','20303']
+start = datetime.datetime(2018, 5, 1, 0, 0, 0)
+end = datetime.datetime(2018, 7, 31, 0, 0, 0)
+target_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/estrus_detection/"
 
@@ -84,11 +84,14 @@ def make_features():
                         features = inte_analyzer.extract_feature(start_point, end_point, community_series, delta_c=delta_c)
                         ave_dence = calculate_average_graph_density(community_series, graph_series, cow_id_list)
                         ave_iso = calculate_average_graph_isolation(community_series, graph_series, cow_id_list)
-                        # 開始時刻, 平均密度, 平均孤立度, 非休息割合, セッション長
-                        feature_list.append([start_point, ave_dence, ave_iso, 1 - features[2], features[0]])
+                        max_cow, same_time = look_for_cow_having_max_weight(community_series, graph_series, cow_id_list, cow_id)
+                        # 開始時刻, 平均密度, 平均孤立度, 非休息割合, セッション長, 同じコミュニティになった回数, その牛
+                        feature_list.append([start_point, end_point, ave_dence, ave_iso, 1 - features[2], features[0], same_time, max_cow])
                     except KeyError:
                         pdb.set_trace()
                 my_utility.write_values(change_point_file + str(cow_id) + ".csv", feature_list)
+            else:
+                my_utility.write_values(change_point_file + str(cow_id) + ".csv", [[t_start, t_end]])
         e2 = time.time()
         print("処理時間", (e2-s2)/60, "[min]")
         date += datetime.timedelta(days=1)
@@ -196,6 +199,23 @@ def _form_graph2(graph, index_list):
             if (i in index_list or j in index_list):
                 ret_graph[i,j] = graph[i,j]
     return ret_graph
+
+def look_for_cow_having_max_weight(community_series, graph_series, cow_id_list, target_cow_id):
+    """ グラフのエッジの重みの平均が最大となる牛の個体番号ならびにセッション内で同じコミュニティだった時間を算出する """
+    N = len(graph_series[0])
+    sum_graph = np.zeros((N, N)) # すべてのグラフの和
+    # グラフ系列（隣接行列）をすべて足し合わせる
+    for graph in graph_series:
+        sum_graph += graph
+    target_index = cow_id_list.index(target_cow_id)
+    max_cow_index = np.where(sum_graph[target_index] == max(sum_graph[target_index]))[0][0] # グラフのエッジの重みが対象牛に対して最大だったノードのインデックスを取得
+    max_cow = cow_id_list[max_cow_index] # 牛の個体番号を求める
+    # その牛と同じコミュニティであった回数を取得する
+    count = 0
+    for community in community_series:
+        if (max_cow in community):
+            count += 1
+    return max_cow, count
 
 if __name__ == '__main__':
     make_features()
