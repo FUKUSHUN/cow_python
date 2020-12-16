@@ -68,11 +68,21 @@ class GraphAnalysis:
                 log_p += np.log((mu_j ** x_j) * ((1 - mu_j) ** (1 - x_j))) # ベルヌーイ
         elif (self.graph_type == "Poisson"):
             for x_j, lam_j in zip(x, param):
-                if (lam_j > 0):
-                    log_p += x_j * np.log(lam_j) - np.log(math.factorial(x_j)) + (-1 * lam_j) # ポアソン
-                else:
-                    log_p += 1 # パラメータが0の場合，重みがつく確率は0，すなわちx=0となる確率は1
+                try:
+                    if (lam_j > 0):
+                        log_p += x_j * np.log(lam_j) - self._log_factorial(int(x_j)) + (-1 * lam_j) # ポアソン
+                    else:
+                        log_p += 1 # パラメータが0の場合，重みがつく確率は0，すなわちx=0となる確率は1
+                except:
+                    pdb.set_trace()
         return log_p
+    
+    def _log_factorial(self, x):
+        """ log(math.factorial(x))を計算する（オーバーフロー対策） """
+        if (x == 0):
+            return 1 # 0の階乗は1
+        else:
+            return sum(map(lambda y: math.log(y), range(1,x+1))) # logをとってから足し合わせる = log(x!)
 
     def visualize_graph(self, graph, focused_index, label_list, save_path, filename):
         cut_graph1 = self._cut_graph(graph, focused_index)
