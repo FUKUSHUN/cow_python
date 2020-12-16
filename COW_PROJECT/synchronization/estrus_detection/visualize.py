@@ -1,4 +1,5 @@
 import os, sys
+import time
 import datetime
 import numpy as np
 import pandas as pd
@@ -34,30 +35,37 @@ def score_one_part(arrays, method='sum'):
 
 def search_most_stable_time(arrays):
     """ 1つのパーティションでもっともスコアが高かったセッションを求める """
-    score = -1
-    representitive = 0
+    score = 0
+    representitive = None
     for row in arrays:
         if (score < row[8]):
             score = row[8]
             representitive = row
     return representitive
 
-def visualize_adjectory(row, target_cow_id, delta=5):
-    opponent_cow_id = str(row[7])
-    start_t = datetime.datetime.strptime(row[0], '%Y-%m-%d %H:%M:%S')
-    end_t = datetime.datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
-    tmp_time = start_t - datetime.timedelta(hours=9) # 時差の分巻き戻しておく（翌朝になっている可能性もあるので）
+def visualize_adjectory(dt, row, target_list, delta=5):
+    s = time.time()
+    tmp_time = dt - datetime.timedelta(hours=9) # 時差の分巻き戻しておく（翌朝になっている可能性もあるので）
     date = datetime.datetime(tmp_time.year, tmp_time.month, tmp_time.day, 0, 0, 0)
     cow_id_list = my_utility.get_existing_cow_list(date, cows_record_file)
     com_creater = community_creater.CommunityCreater(date, cow_id_list)
-    com_creater.visualize_adjectory(start_t, end_t, [target_cow_id, opponent_cow_id], target_cow_id=target_cow_id, delta=delta) # 軌跡をプロット
-    print("軌跡動画と画像を作成しました: ", target_cow_id, " -> ", start_t.strftime('%Y/%m/%d %H:%M:%S'))
+    for i, cow_data in enumerate(row): # 各牛ごとに見ていく
+        if (cow_data is not None):
+            target_cow_id = target_list[i]
+            opponent_cow_id = str(int(cow_data[7]))
+            start_t = datetime.datetime.strptime(cow_data[0], '%Y-%m-%d %H:%M:%S')
+            end_t = datetime.datetime.strptime(cow_data[1], '%Y-%m-%d %H:%M:%S')
+            com_creater.visualize_adjectory(start_t, end_t, [target_cow_id, opponent_cow_id], target_cow_id=target_cow_id, delta=delta) # 軌跡をプロット
+            print("軌跡動画と画像を作成しました: ", target_cow_id, " -> ", start_t.strftime('%Y/%m/%d %H:%M:%S'))
+    e = time.time()
+    print("処理時間", (e-s)/60, "[min]")
     return
 
 if __name__ == "__main__":
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     dir_name = './synchronization/estrus_detection/'
     target_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283']
+    score_df = pd.DataFrame([])
     for target_cow_id in target_list:
         filename = dir_name + target_cow_id + '.csv'
         # csvファイルをロードする
@@ -69,25 +77,34 @@ if __name__ == "__main__":
         score_list = df.values.tolist() # リストに変換
         beginning_time = datetime.datetime.strptime(score_list[0][0], '%Y-%m-%d %H:%M:%S') # ファイル全体の開始時刻
         ending_time = datetime.datetime.strptime(score_list[len(score_list)-1][1], '%Y-%m-%d %H:%M:%S') # ファイル全体の終了時刻
-        start = beginning_time
+        date_start = beginning_time
         time_series = []
-        while (start < ending_time):
-            time_series.append(start)
-            end = start + datetime.timedelta(hours=24)
-            partition = extract_list(score_list, start, end)
-            partition_list.append(partition) # 期間内のデータを一つのパーティションとしてリストに登録
-            start = end
+        while (date_start < ending_time):
+            date_end = date_start + datetime.timedelta(hours=24)
+            start = date_start
+            while (start < date_end): # 1日の範囲で
+                time_series.append(start)
+                end = start + datetime.timedelta(hours=12)
+                partition = extract_list(score_list, start, end)
+                partition_list.append(partition) # 期間内のデータを一つのパーティションとしてリストに登録
+                start = end
+            date_start = date_end
         # 1パーティションごとにスコアを算出する
         partition_score_list = []
         most_stable_list = []
         for partition in partition_list:
-            partition_score = score_one_part(partition, method='max')
+            partition_score = score_one_part(partition, method='sum')
             partition_score_list.append(partition_score)
             most_stable_list.append(search_most_stable_time(partition))
-        plot_maker = plotting.PlotMaker2D(xmin=None, xmax=None, ymin=None, ymax=None, title='estrus scores', xlabel='time_series', ylabel='score')
-        plot_maker.create_bar_graph(time_series, partition_score_list)
+        plot_maker = plotting.PlotMaker2D(xmin=None, xmax=None, ymin=None, ymax=None, title='estrus scores', xlabel='time_series', ylabel='score', figsize=(19.2, 10.8))
+        plot_maker.adjust_margin(top=0.95, bottom=0.15, right=0.95, left=0.05)
+        plot_maker.create_bar_graph(time_series, partition_score_list, width=0.4)
         plot_maker.save_fig(dir_name + target_cow_id + ".png")
-        # 最も安定的だった期間の軌跡描画を行う
-        for row in most_stable_list:
-            visualize_adjectory(row, target_cow_id)
-        pdb.set_trace()
+        # 最も安定的だった期間の軌跡描画を行うためのデータフレームを作成
+        tmp_df = pd.concat([pd.Series(time_series, name='Time'), pd.Series(most_stable_list, name=target_cow_id)], axis=1)
+        tmp_df = tmp_df.set_index('Time')
+        score_df = pd.concat([score_df, tmp_df], axis=1)
+    # 軌跡描画を行う
+    for time, row in score_df.iterrows():
+        visualize_adjectory(time, row, target_list)
+    pdb.set_trace()
