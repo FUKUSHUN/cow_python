@@ -119,12 +119,30 @@ class CommunityCreater:
             epsilon : int. 単位は [m]. この距離以内の時行動同期を測定する（この距離以上のとき同期していても0）． """
         beh_df2 = beh_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
         pos_df2 = pos_df[[str(cow_id1), str(cow_id2)]] # 2頭を抽出
-        # --- 行動同期スコアの計算（論文参照） --- 
-        prop_vec_cow1 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id1)].values)
-        prop_vec_cow2 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id2)].values)
-        neighbor_time = self._measure_time_neighbor(pos_df2.loc[:, str(cow_id1)].values, pos_df2.loc[:, str(cow_id2)].values, threshold=10)
-        dist =  np.abs(prop_vec_cow1-prop_vec_cow2).sum() # 3次元空間内での2点の距離をマンハッタン距離で求める
-        score = neighbor_time * (2 - dist)
+        # --- 行動同期スコアの計算（空間におけるマンハッタン距離から算出する方法） --- 
+        # prop_vec_cow1 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id1)].values)
+        # prop_vec_cow2 = self._measure_behavior_ratio(beh_df2.loc[:, str(cow_id2)].values)
+        # neighbor_time = self._measure_time_neighbor(pos_df2.loc[:, str(cow_id1)].values, pos_df2.loc[:, str(cow_id2)].values, threshold=10)
+        # dist =  np.abs(prop_vec_cow1-prop_vec_cow2).sum() # 3次元空間内での2点の距離をマンハッタン距離で求める
+        # score = neighbor_time * (2 - dist)
+        # --- 行動同期スコアの計算（スコア行列を使用する方法） ---
+        score = 0
+        score_matrix = np.array([[1, 0, 0], [0, 3, 0], [0, 0, 9]])
+        behavior_list1 = beh_df2.loc[:, str(cow_id1)].values # cow1の行動系列
+        behavior_list2 = beh_df2.loc[:, str(cow_id2)].values # cow2の行動系列
+        # 2頭間距離のリストを作る
+        distance_list = []
+        for _, row in pos_df2.iterrows():
+            try:
+                lat1, lon1, lat2, lon2 = row[0][0], row[0][1], row[1][0], row[1][1]
+            except TypeError:
+                pdb.set_trace()
+            dist, _ = geography.get_distance_and_direction(lat1, lon1, lat2, lon2, True)
+            distance_list.append(dist)
+        # 同期スコアを加算していく
+        for beh1, beh2, dist in zip(behavior_list1, behavior_list2, distance_list):
+            if (dist <= epsilon): # 距離が閾値以内にいる場合
+                score += score_matrix[beh1, beh2] # スコア行列に従ってスコアを加算する
         return score
 
     def _measure_behavior_ratio(self, arraylist):

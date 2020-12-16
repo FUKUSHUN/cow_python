@@ -68,7 +68,10 @@ class GraphAnalysis:
                 log_p += np.log((mu_j ** x_j) * ((1 - mu_j) ** (1 - x_j))) # ベルヌーイ
         elif (self.graph_type == "Poisson"):
             for x_j, lam_j in zip(x, param):
-                log_p += np.log(((lam_j ** x_j) / math.factorial(x_j)) * (np.e ** (-1 * lam_j))) # ポアソン
+                if (lam_j > 0):
+                    log_p += x_j * np.log(lam_j) - np.log(math.factorial(x_j)) + (-1 * lam_j) # ポアソン
+                else:
+                    log_p += 1 # パラメータが0の場合，重みがつく確率は0，すなわちx=0となる確率は1
         return log_p
 
     def visualize_graph(self, graph, focused_index, label_list, save_path, filename):

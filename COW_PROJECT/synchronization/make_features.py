@@ -23,7 +23,7 @@ import synchronization.topic_model.session_io as session_io
 
 delta_c = 2 # コミュニティの抽出間隔 [minutes]
 delta_s = 5 # データのスライス間隔 [seconds] 
-epsilon = 12 # コミュニティ決定のパラメータ
+epsilon = 10 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 1 # コミュニティ決定のパラメータ
 start = datetime.datetime(2018, 5, 1, 0, 0, 0)
@@ -51,7 +51,7 @@ def make_features():
         t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
         while (t < t_end):
             t_list.append(t)
-            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="position", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
+            interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="behavior", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
                 if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
             community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, delta=delta_s, leng=leng) \
                 if (t_start <= t) else [[]] # コミュニティを決定
@@ -71,7 +71,7 @@ def make_features():
         for cow_id in target_list:
             if (cow_id in cow_id_list):
                 # graph_analyzer.visualize_graph(cow_id, t_list) # グラフをまとめて可視化
-                change_points, score_list = graph_analyzer.detect_change_point(cow_id, 5, 5, threshold=450) # 変化点検知
+                change_points, score_list = graph_analyzer.detect_change_point(cow_id, 5, 5, threshold=400) # 変化点検知
                 # df = pd.concat([pd.Series(t_list), pd.Series(score_list), pd.Series(change_points)], axis=1, names=["time", "score", "change_flag"])
                 # df.to_csv("./synchronization/graph_operation/"+ str(cow_id) + ".csv") # csvで保存
                 community_list = make_session.get_focused_community(communities_list, cow_id) # セッションを作成するために対象牛の所属するコミュニティを抽出
