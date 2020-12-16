@@ -3,9 +3,9 @@ import math
 import numpy as np
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import gps.gps_nmea_data as gpsdata #自作クラス
-import gps.gps_nmea_data_list as gpslist #自作クラス
+# sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
+import cows.gps.gps_nmea_data as gpsdata #自作クラス
+import cows.gps.gps_nmea_data_list as gpslist #自作クラス
 
 """
 	速度 (速さ, 角度) を単位 [m/s] で求める

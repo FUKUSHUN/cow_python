@@ -3,8 +3,8 @@ import datetime
 import sqlite3
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
-import gps_nmea_data as gps #自作クラス
+# sys.path.append(os.path.join(os.path.dirname(__file__))) #パスの追加
+import cows.gps.gps_nmea_data as gps #自作クラス
 
 class GpsNmeaDataList:
 	_error_threshold = 0.0694 #[m/s] 固定, 動いたかどうかを判断する速さの閾値, 250 m/h (Estimation of Grazing Time of Holstein Cows by Walking Time Observed by a Hand-held GPS) を参考

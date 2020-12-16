@@ -26,7 +26,7 @@ class CommunityCreater:
 
     def __init__(self, date, cow_id_list):
         self.community_history = []
-        self.date = date
+        self.date = datetime.datetime(date.year, date.month, date.day, 0, 0, 0)
         self.behavior_synch = behavior_synchronizer.Synchronizer(date, cow_id_list)
         self.position_synch = position_synchronizer.Synchronizer(date, cow_id_list)
         self.cow_id_list = self._check_cow_id_list()
