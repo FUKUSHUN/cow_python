@@ -22,15 +22,34 @@ def get_existing_cow_list(date:datetime, filepath):
     print("指定の日付の牛のリストが見つかりません", date.strftime("%Y/%m/%d"))
     sys.exit()
 
+def confirm_dir(dir_path):
+    """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
+    if (os.path.isdir(dir_path)):
+        return
+    else:
+        os.makedirs(dir_path)
+        print("ディレクトリを作成しました", dir_path)
+        return
+
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 9, 26, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 1, 0, 0, 0)
+    start = datetime.datetime(2018, 12, 30, 0, 0, 0)
+    end = datetime.datetime(2018, 12, 31, 0, 0, 0)
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
+    output_dir = "./behavior_information/"
     date = start
     while (date < end):
         cow_id_list = get_existing_cow_list(date, cows_record_file)
         for cow_id in cow_id_list:
+            output_file = output_dir + date.strftime("%Y%m%d")
+            confirm_dir(output_file) # ディレクトリを作成
             model = classifier.Classifier()
-            model.classify(date, cow_id) # 行動分類結果をcsvファイルに出力する
+            t_list, v_list, labels = model.classify(date, cow_id) # 行動分類を行う
+            if (len(t_list) != 0):
+                filename = output_file + "/" + str(cow_id) + ".csv"
+                model.to_csv(t_list, v_list, labels, filename) # csv出力する
+                filename = output_file + "/" + str(cow_id) + ".jpg"
+                model.plot_v_label(t_list, v_list, labels, filename)
+            else:
+                continue
         date += datetime.timedelta(days=1)
  

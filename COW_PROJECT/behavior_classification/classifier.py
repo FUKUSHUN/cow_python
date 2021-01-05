@@ -8,7 +8,6 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-#from sklearn.externals import joblib
 import sklearn.decomposition as skd # 主成分分析
 import pickle
 import pdb # デバッグ用
@@ -90,7 +89,6 @@ class Classifier:
 
 	def classify(self, date, target_cow_id):
 		features_file = "./behavior_classification/training_data/features.csv"
-		output_file = "./behavior_information/" + date.strftime("%Y%m%d")
 		# 事前パラメータを用意
 		cov_matrixes_r = [self.rest_dist.get_cov_matrix(), self.graze_dist_r.get_cov_matrix()]
 		mu_vectors_r = [self.rest_dist.get_mean_vector(), self.graze_dist_r.get_mean_vector()]
@@ -131,22 +129,22 @@ class Classifier:
 				labels.append(w)
 			new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
 			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
-			self._confirm_dir(output_file)
-			output_file += "/" + str(target_cow_id) + ".csv"
-			df = pd.concat([pd.Series(data=new_t_list, name='Time'), pd.Series(data=new_v_list, name='Velocity'), pd.Series(data=labels, name='Label')], axis=1)
-			df.to_csv(output_file)
-			# pred_plot = my_plot.PlotUtility()
-			# pred_plot.scatter_time_plot(new_t_list, new_v_list, labels) # 時系列で速さの散布図を表示
-			# pred_plot.show()
-
-	def _confirm_dir(self, dir_path):
-		""" ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
-		if (os.path.isdir(dir_path)):
-			return
+			return new_t_list, new_v_list, labels
 		else:
-			os.makedirs(dir_path)
-			print("ディレクトリを作成しました", dir_path)
-			return
+			return [], [], []
+	
+	def to_csv(self, t_list, v_list, labels, output_file):
+		""" 行動レコードのCSVファイルを作成する """
+		df = pd.concat([pd.Series(data=t_list, name='Time'), pd.Series(data=v_list, name='Velocity'), pd.Series(data=labels, name='Label')], axis=1)
+		df.to_csv(output_file)
+		return
+
+	def plot_v_label(self, t_list, v_list, labels, output_file):
+		""" 時系列の速さのリストを分類結果に応じて色分けする """
+		pred_plot = my_plot.PlotUtility()
+		pred_plot.scatter_time_plot(t_list, v_list, labels) # 時系列で速さの散布図を表示
+		pred_plot.save_fig(output_file)
+		return
 
 # if __name__ == '__main__':
 # 	# --- 変数定義 ---
