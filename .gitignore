@@ -26,3 +26,5 @@ output/
 *.pickle
 *.txt
 *.png
+*.json
+*.zip

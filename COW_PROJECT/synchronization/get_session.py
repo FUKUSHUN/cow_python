@@ -26,7 +26,7 @@ delta_s = 5 # データのスライス間隔 [seconds]
 epsilon = 12 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 1 # コミュニティ決定のパラメータ
-target_list = ['20113','20116','20118','20122','20126','20129','20158','20170','20192','20225','20261','20267','20295','20299']
+target_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283']
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/change_point/"
 corpus_file = "./synchronization/topic_model/corpus/"
@@ -112,8 +112,8 @@ def load_corpus():
 
 def predict_session(gaussian_lda, theta):
     """ 新にセッションを作り，インタラクション列を追加する """
-    start = datetime.datetime(2018, 10, 21, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 22, 0, 0, 0)
+    start = datetime.datetime(2018, 5, 16, 0, 0, 0)
+    end = datetime.datetime(2018, 7, 31, 0, 0, 0)
     date = start
     while (date < end):
         s1 = time.time()
@@ -179,7 +179,7 @@ if __name__ == "__main__":
     
     # --- コーパスを読み込む ---
     corpus = load_corpus()
-    corpus = np.random.choice(corpus, int(np.round(0.3 * len(corpus))), replace=False) # corpusの中から間引いて学習に使用する
+    corpus = np.random.choice(corpus, int(np.round(0.7 * len(corpus))), replace=False) # corpusの中から間引いて学習に使用する
     # pdb.set_trace()
 
     # --- セッションの学習 or パラメータ割り当て ---
@@ -187,35 +187,33 @@ if __name__ == "__main__":
         # LDAのハイパーパラメータ設定
         M = len(corpus)
         K = 5
-        alpha = np.array([[1, 1, 1, 1, 1] for _ in range(M)]) # parameter for dirichlet
-        psi = np.array([[[3.73512784e-07, 1.69779886e-08], [1.69779886e-08, 2.85138486e-08]], \
-                    [[5.05955252e-06, 5.67102212e-06], [5.67102212e-06, 6.96904853e-06]], \
-                        [[3.42327177e-07, 3.24412304e-07], [3.24412304e-07, 3.75268994e-07]], \
-                            [[2.58528836e-07, 1.90666739e-07], [1.90666739e-07, 2.80431611e-07]], \
-                                [[4.90882946e-07, 4.63907573e-07], [4.63907573e-07, 6.17471018e-07]]]) # parameter for Gaussian Wishert
-        m = np.array([[0.0168134, 0.49485071], [0.97943516, 0.01868553], [0.28869599, 0.59634904], [0.29941286, 0.39345673], [0.67838774, 0.241999]]) # parameter for Gaussian Wishert
-        nu = np.array([6.85110703e+08, 1.05511992e+09, 2.35658659e+08, 1.41584940e+08, 2.30210528e+08]) # parameter for Gaussian Wishert
-        beta = np.array([6.85110703e+08, 1.05511992e+09, 2.35658659e+08, 1.41584940e+08, 2.30210528e+08]) # parameter for Gaussian Wishert
-        max_iter = 1000
+        alpha = np.array([[1, 1, 1, 1] for _ in range(M)]) # parameter for dirichlet
+        psi = np.array([[[2.0, 0.0], [0.0, 2.0]], \
+                    [[2.0, 0.0], [0.0, 2.0]], \
+                        [[2.0, 0.0], [0.0, 2.0]], \
+                            [[2.0, 0.0], [0.0, 2.0]]]) # parameter for Gaussian Wishert
+        m = np.array([[1, 0], [0, 1], [0, 0], [0.3, 0.3]]) # parameter for Gaussian Wishert
+        nu = np.array([5, 5, 5, 5]) # parameter for Gaussian Wishert
+        beta = np.array([5.0, 5.0, 5.0, 5.0]) # parameter for Gaussian Wishert
+        max_iter = 1500
 
         # ギブスサンプリングによるクラスタリング
-        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=5, dimensionality=2)
+        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=4, dimensionality=2)
         Z, theta = gaussian_lda.inference(alpha, psi, nu, m, beta, max_iter)
-        result = gaussian_lda.predict(corpus, theta)
+        # result = gaussian_lda.predict(corpus, theta)
     else: # 学習しない (定数値を与える)
-        beta = np.array([1.05669156e+09, 2.13276228e+08, 2.14682579e+08, 7.26673544e+08, 1.36360834e+08])
-        m = np.array([[0.97754441, 0.01987148], [0.29367018, 0.56291046], [0.67696687, 0.24723722], [0.02296877, 0.50454176], [0.39541451, 0.36614583]])
-        nu = np.array([1.05669156e+09, 2.13276228e+08, 2.14682579e+08, 7.26673544e+08, 1.36360834e+08])
-        W = np.array([[[3.12971170e-06, 3.65023628e-06], [3.65023628e-06, 4.77065779e-06]],\
-                        [[2.63659347e-07, 2.35619748e-07], [2.35619748e-07, 2.87111953e-07]], \
-                            [[5.15136665e-07, 5.09762336e-07], [5.09762336e-07, 6.83040306e-07]], \
-                                [[2.34470246e-07, 1.39159975e-08], [1.39159975e-08, 2.54139520e-08]], \
-                                    [[2.38485200e-07, 2.06301212e-07], [2.06301212e-07, 3.24740050e-07]]])
+        beta = np.array([589307163.460198, 323020503.759785, 72738742.85204238, 330578121.927975])
+        m = np.array([[0.9806218714269278, 0.01927556323524467], [0.00046157409354147483, 0.5990943621538058], [0.17536538609218583, 0.35482909625335546], [0.5780805567607266, 0.3189921501692251]])
+        nu = np.array([589307163.460198, 323020503.759785, 72738742.85204238, 330578121.927975])
+        W = np.array([[[0.00023267719356337007, 0.00023331524100325075], [0.00023331524100325086, 0.000235484452004462]], \
+            [[9.30688634377732e-05, -6.9804035862662424e-09], [-6.980403586266246e-09, 5.273889183190476e-08]], \
+                [[9.080984813633261e-07, 8.13808890425863e-08], [8.138088904258649e-08, 3.6969362276004587e-07]], \
+                    [[2.3299351405514757e-07, 2.236769622813933e-07], [2.2367696228139326e-07, 2.792943056476546e-07]]])
         theta = np.array([0.450009512 , 0.09084722, 0.09144625, 0.30952585, 0.05808556])
-        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=5, dimensionality=2)
+        gaussian_lda = GaussianLDA(corpus = corpus, num_topic=4, dimensionality=2)
         gaussian_lda.set_params(beta, m, nu, W)
-        result = gaussian_lda.predict(corpus, theta)
+        # result = gaussian_lda.predict(corpus, None)
     
     # --- 新しいセッションを予測する ---
-    predict_session(gaussian_lda, theta)
+    predict_session(gaussian_lda, None)
     

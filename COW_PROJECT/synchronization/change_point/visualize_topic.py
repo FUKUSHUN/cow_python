@@ -1,6 +1,3 @@
-"""
-このコードは行動分類用にプロット関係の関数をまとめたコードである
-"""
 import math
 import datetime
 import numpy as np
@@ -9,6 +6,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import mpl_toolkits.mplot3d as mpl3d
 import pdb
+
+"""
+このコードは行動分類用にプロット関係の関数をまとめたコードである (main関数)
+"""
 
 def plot_by_day(df, usecols, names, filename):
     color_list = ['red', 'green', 'blue', 'orange', 'purple']
@@ -57,11 +58,11 @@ def _plot_color_bar(ax, series, name, color_list):
 
 if __name__ == "__main__":
     dir_path = './'
-    target_cow_id_list = ['20113', '20170', '20295', '20299']
-    start = datetime.datetime(2018, 10, 1, 0, 0, 0)
-    end = datetime.datetime(2018, 10, 30, 0, 0, 0)
-    usecols = [4, 5, 6, 7, 8, 9]
-    names = ['topic=1', 'topic=2', 'topic=3', 'topic=4', 'topic=5', 'topic_num']
+    target_cow_id_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283']
+    start = datetime.datetime(2018, 5, 1, 0, 0, 0)
+    end = datetime.datetime(2018, 5, 31, 0, 0, 0)
+    usecols = [4, 5, 6, 7, 8]
+    names = ['topic=1', 'topic=2', 'topic=3', 'topic=4', 'topic_num']
     for cow_id in target_cow_id_list:
         curr_dir = dir_path + cow_id + '/'
         date = start

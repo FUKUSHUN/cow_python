@@ -1,0 +1,3 @@
+diff a/COW_PROJECT/テストコード/debug.log b/COW_PROJECT/テストコード/debug.log	(rejected hunks)
+@@ -0,0 +1 @@
++[1226/163130.782:ERROR:directory_reader_win.cc(43)] FindFirstFile: �w�肳�ꂽ�p�X��������܂���B (0x3)
