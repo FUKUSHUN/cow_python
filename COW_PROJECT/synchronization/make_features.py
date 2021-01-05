@@ -26,9 +26,11 @@ delta_s = 5 # データのスライス間隔 [seconds]
 epsilon = 10 # コミュニティ決定のパラメータ
 dzeta = 12 # コミュニティ決定のパラメータ
 leng = 1 # コミュニティ決定のパラメータ
-start = datetime.datetime(2018, 5, 1, 0, 0, 0)
-end = datetime.datetime(2018, 7, 31, 0, 0, 0)
-target_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283']
+start = datetime.datetime(2019, 6, 10, 0, 0, 0)
+end = datetime.datetime(2019, 6, 20, 0, 0, 0)
+# target_list = ['20122','20129','20158','20170','20192','20197','20215','20267','20283'] # 2018/5/1 - 2018/7/31
+# target_list = ['20113', '20118', '20126', '20170', '20255', '20295', '20299'] # 2018/9/10 - 2018/12/25
+target_list = ['20115', '20117', '20127', '20131', '20171', '20220', '20283', '20303'] # 2019/3/20 - 2019/7/3
 cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
 change_point_file = "./synchronization/estrus_detection/"
 

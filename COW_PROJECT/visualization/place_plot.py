@@ -117,6 +117,7 @@ class PlotMaker:
             video.write(img)
         # 出力
         video.release()
+        return
 
     def make_adjectory(self, df:pd.DataFrame):
         """ 軌跡画像を作成する

@@ -1,8 +1,11 @@
 import os, sys
 import datetime
 import csv
+import json
 
-""" 便利系のファンクションを格納（共通して使用するがまだくくりがないものを集める。メイン関数で使用される） """
+""" 
+便利系のファンクションを格納（共通して使用するがまだくくりがないものを集める。メイン関数で使用される）
+ """
 
 def get_existing_cow_list(date:datetime, filepath):
     """ 引数の日にちに第一放牧場にいた牛のリストを得る """
@@ -16,13 +19,13 @@ def get_existing_cow_list(date:datetime, filepath):
     sys.exit()
 
 def confirm_dir(dir_path):
-        """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
-        if (os.path.isdir(dir_path)):
-            return
-        else:
-            os.makedirs(dir_path)
-            print("ディレクトリを作成しました", dir_path)
-            return
+    """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
+    if (os.path.isdir(dir_path)):
+        return
+    else:
+        os.makedirs(dir_path)
+        print("ディレクトリを作成しました", dir_path)
+        return
 
 def write_values(filepath, value_list):
     """ csv形式のファイル出力をする """
@@ -47,6 +50,19 @@ def write_logs(filepath, value_list):
             for value in value_list:
                 print(value, file=f)
     return
+
+def write_json(filepath, json_data):
+    """ jsonファイルを書き込む (既存のファイルに上書きはできないので注意)
+        json_data:  dict """
+    with open(filepath, 'w') as f:
+        json.dump(json_data, f, indent=2, ensure_ascii=False)
+    return
+
+def load_json(filepath):
+    """ jsonファイルをロードする """
+    with open(filepath, 'r') as f:
+        data = json.load(f)
+    return data
 
 def delete_file(filepath):
     """ ファイルが存在している場合にそのファイルを消去する """
