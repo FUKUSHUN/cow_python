@@ -111,11 +111,11 @@ def gaussian_mixed_model_test():
     result = gaussian_model.gibbs_sample(X, np.array([[50, 50]]).T, 1, 3, np.array([[1, 0], [0, 1]]))
 
     # 新たな入力に対する確率を推定
-    new_X = np.arange(1,101, 2)
-    new_Y = np.arange(1,101, 2)
+    new_X = np.arange(1,101, 0.5)
+    new_Y = np.arange(1,101, 0.5)
     grid_X, grid_Y = np.meshgrid(new_X, new_Y)
-    new_X = np.array([grid_X.ravel(), grid_Y.ravel()])
-    prob_matrix = gaussian_model.predict(new_X)
+    new_data = np.array([[x, y] for x_i, y_i in zip(grid_X, grid_Y) for x, y in zip(x_i, y_i)])
+    prob_matrix, dist_matrix = gaussian_model.predict(new_data)
     
     # クラスタリング結果を可視化
     X1 = np.array(extract_data(X, result, 0))
@@ -124,16 +124,22 @@ def gaussian_mixed_model_test():
     plotter2.scatter_plot(X1[:,0], X1[:,1], [1 for _ in range(len(X1))])
     plotter2.scatter_plot(X2[:,0], X2[:,1], [2 for _ in range(len(X2))])
 
-    plotter_prob = plotting.PlotUtility3D()
-    prob1, prob2 = prob_matrix[0], prob_matrix[1]
-    plotter_prob.plot_surface(grid_X, grid_Y, prob1.reshape([50, 50]), c=1)
-    plotter_prob.plot_surface(grid_X, grid_Y, prob2.reshape([50, 50]), c=2)
+    plotter_dist = plotting.PlotUtility3D()
+    dist1 = np.array([dist_x[0] for dist_x in dist_matrix])
+    dist2 = np.array([dist_x[1] for dist_x in dist_matrix])
+    plotter_dist.plot_surface(grid_X, grid_Y, dist1.reshape([200, 200]), c=1)
+    plotter_dist.plot_surface(grid_X, grid_Y, dist2.reshape([200, 200]), c=2)
+
+    plotter_prob = plotting.PlotUtility()
+    color_list = [(0, int(255*prob_x[1]), int(255*prob_x[0])) for prob_x in prob_matrix]
+    c_list = ['#' + hex(tup[0])[2:].zfill(2) + hex(tup[1])[2:].zfill(2) + hex(tup[2])[2:].zfill(2) for tup in color_list] # 文字列に変換
+    plotter_prob.scatter_plot2(new_data[:,0], new_data[:,1], c_list)
 
     # 表示
     plotter.show()
     plotter2.show()
+    plotter_dist.show()
     plotter_prob.show()
-
 
 if __name__ == '__main__':
     #poisson_mixed_model_test()

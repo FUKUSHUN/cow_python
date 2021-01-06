@@ -273,24 +273,37 @@ class GaussianMixedModel:
         return
 
     def predict(self, new_X):
-        """ 新規入力に対する確率を推定する（正規化はしていない） """
-        D, M, K = len(new_X), len(new_X.T), len(self._student_parameters) # 入力データ数とクラスタ数
-        prob = np.zeros((K,M)) # 各クラスタからの生成確率
+        """ 新規入力に対する確率を推定する
+            Return
+                prob    各クラスタへの所属確率
+                dist    各クラスタの確率密度関数での尤度 """
+        D, M, K = len(new_X[0]), len(new_X), len(self._student_parameters) # 入力データ数とクラスタ数
+        dist = np.zeros((M,K)) # 正規化前のt分布のスコア
+        prob = np.zeros((M,K)) # 各クラスタからの生成確率
         sum_alpha = sum(self._alpha_vector)
+        alpha = np.zeros(K)
+        mu = np.zeros((K, D, 1))
+        lam = np.zeros((K, D, D))
+        nd = np.zeros(K)
+        # 先に各クラスタのパラメータを用意
         for k in range(K):
-            alpha = self._alpha_vector[k] / sum_alpha
-            mu = self._student_parameters[k][0]
-            lam = self._student_parameters[k][1]
-            nd = self._student_parameters[k][2]
-            for m in range(M):
+            alpha[k] = self._alpha_vector[k] / sum_alpha
+            mu[k] = self._student_parameters[k][0]
+            lam[k] = self._student_parameters[k][1]
+            nd[k] = self._student_parameters[k][2]
+        # new_Xに対して確率推定
+        for m in range(M):
+            X = new_X[m].reshape((2, 1))
+            for k in range(K):
                 equ1 = 0.0
-                print(k, m, "の計算")
                 for d in range(1, D+1):
-                    equ1 += math.log((nd + d) / 2)
-                equ2 = math.log(np.linalg.det(lam)) / 2 - D * math.log(math.pi * nd) / 2
-                equ3 = -1 * (nd + D) * math.log(1 + 1/nd * np.dot((new_X[:,m:m+1] - mu).T, np.dot(lam, (new_X[:,m:m+1] - mu))))
-                prob[k,m] = alpha * math.exp(equ1 + equ2 + equ3)
-        return prob
+                    equ1 += math.log((nd[k] + d) / 2)
+                equ2 = math.log(np.linalg.det(lam[k])) / 2 - D * math.log(math.pi * nd[k]) / 2
+                equ3 = -1 * (nd[k] + D) * math.log(1 + 1/nd[k] * np.dot((X - mu[k]).T, np.dot(lam[k], (X - mu[k]))))
+                dist[m,k] = alpha[k] * math.exp(equ1 + equ2 + equ3)
+            prob[m] = dist[m]
+            prob[m] /= sum(prob[m]) # 正規化
+        return prob, dist
 
     def get_gaussian_parameters(self):
         return self.mu_vectors, self.cov_matrixes

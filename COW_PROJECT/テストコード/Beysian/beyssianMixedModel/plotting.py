@@ -37,17 +37,27 @@ class PlotUtility:
 
     def scatter_plot(self, x_list, y_list, c_list, size=1):
         """ 横軸に時間，縦軸にセンサ値をプロットする
-        散布図形式
-        Parameter
-            x_list  : 横軸の値のリスト
-            y_list  : 縦軸の値のリスト
-            c_list  : 色分けのリスト """
+            散布図形式
+            Parameter
+                x_list  : 横軸の値のリスト
+                y_list  : 縦軸の値のリスト
+                c_list  : 色分けのリスト """
         color_list = [self.color_table[c] for c in c_list]
         x = np.array(x_list)
         y = np.array(y_list)
         c = np.array(color_list)
         self.ax.scatter(x, y, c = c, s = size)
 
+    def scatter_plot2(self, x_list, y_list, c_list, size=1):
+        """ 横軸に時間，縦軸にセンサ値をプロットする (直接色を指定するバージョン)
+            散布図形式
+            Parameter
+                x_list  : 横軸の値のリスト
+                y_list  : 縦軸の値のリスト
+                c_list  : 色分けのリスト """
+        x = np.array(x_list)
+        y = np.array(y_list)
+        self.ax.scatter(x, y, c = c_list, s = size)
 
     def scatter_time_plot(self, t_list, v_list, c_list, size=1):
         """ 横軸に時間，縦軸にセンサ値をプロットする
