@@ -33,6 +33,8 @@ class Classifier:
 	walk_dist: single_model.MyGaussianDistribution # 歩行の分布
 	graze_dist_r: single_model.MyGaussianDistribution # 採食の分布
 	graze_dist_a: single_model.MyGaussianDistribution # 採食の分布
+	mixture_model_r: mixed_model.GaussianMixedModel # 休息セグメントの混合モデル
+	mixture_model_a: mixed_model.GaussianMixedModel # 活動セグメントの混合モデル
 
 	def __init__(self):
 		self.rest_dist = self._get_prior_dist("rest", "rest", self.rest_usecols, self.rest_names) # 休息の分布
@@ -88,7 +90,6 @@ class Classifier:
 		return
 
 	def classify(self, date, target_cow_id):
-		features_file = "./behavior_classification/training_data/features.csv"
 		# 事前パラメータを用意
 		cov_matrixes_r = [self.rest_dist.get_cov_matrix(), self.graze_dist_r.get_cov_matrix()]
 		mu_vectors_r = [self.rest_dist.get_mean_vector(), self.graze_dist_r.get_mean_vector()]
@@ -105,10 +106,11 @@ class Classifier:
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #牛舎内にいる時間を除く
 		if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0):
 			# --- 特徴抽出 ---
-			features = feature_extraction.FeatureExtraction(features_file, date, target_cow_id)
-			features.output_features()
+			features = feature_extraction.FeatureExtraction(date, target_cow_id)
+			feature_list = features.output_features()
 			# --- 仮説検証 ---
-			df = pd.read_csv(features_file, sep = ",", header = 0, usecols = [0,3,4,5,6,9,10,11,12], names=('Time', 'RTime', 'WTime', 'AccumulatedDis', 'VelocityAve', 'RestVelocityAve', 'RestVelocityDiv', 'WalkVelocityAve', 'WalkVelocityDiv')) # csv読み込み
+			df = pd.DataFrame(data=feature_list, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "Max velocity", "Min velocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
+			# df = pd.read_csv(features_file, sep = ",", header = 0, usecols = [0,3,4,5,6,9,10,11,12], names=('Time', 'RTime', 'WTime', 'AccumulatedDis', 'VelocityAve', 'RestVelocityAve', 'RestVelocityDiv', 'WalkVelocityAve', 'WalkVelocityDiv')) # csv読み込み
 			X_rest = df[self.rest_names].values.T
 			X_walk = df[self.walk_names].values.T
 			# ギブスサンプリングによるクラスタリング

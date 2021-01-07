@@ -26,12 +26,10 @@ import behavior_classification.functions.postprocessing as postprocessing
 
 """ このコードではfunctions/output_features.pyの関数群をクラスとして管理することを目標に作成されました """
 class FeatureExtraction:
-    output_filename = None # 作成した特徴を出力するファイル名
     date = None # 特徴が作成されるデータの日にち
     cow_id = None # 特徴が作成されるデータの牛のID
 
-    def __init__(self, filename, date:datetime, cow_id):
-        self.output_filename = filename
+    def __init__(self, date:datetime, cow_id):
         self.date = date
         self.cow_id = cow_id
 
@@ -201,29 +199,8 @@ class FeatureExtraction:
                 time_index = time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S") + " | "
         
         print("---特徴を計算しました")
-        ### ファイル名の指定がない時はファイル出力せずにリストを返却 ###
-        if (self.output_filename == ""):
-            return feature_list
-        else:
-            print(self.output_filename + "に出力します---")
-            if (os.path.exists(self.output_filename)): # ファイルがすでに存在しているとき
-                #####出力#####
-                with open(self.output_filename, "w", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Resting velocity average", "Resting velocity deviation", "Walking velocity average", "Walking velocity deviation", "Distance", "Direction"))
-                    for feature in feature_list:
-                        writer.writerow(feature)
-            else:  # ファイルが存在していないとき
-                #####出力#####
-                with open(self.output_filename, "a", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(("Time", "Resting time category", "Walking time category", "Last rest time", "Walking time", "Moving amount", "Average velocity", "Max velocity", "Min velocity", "Resting velocity average", "Resting velocity deviation", "Walking velocity average", "Walking velocity deviation", "Distance", "Direction"))                    
-                    for feature in feature_list:
-                        writer.writerow(feature)
-            print("---" + self.output_filename + "に出力しました")
-            print(sys._getframe().f_code.co_name, "正常終了\n")
-            return
-
+        print(sys._getframe().f_code.co_name, "正常終了\n")
+        return feature_list
 
     def _decide_time_category(self, dt, date):
         """ 時間帯に応じてカテゴリ変数を作成する """
@@ -275,7 +252,7 @@ class FeatureExtraction:
             zipped_list = self.compress(t_list, p_list, d_list, v_list) # 圧縮する
 
             # ---特徴抽出---
-            self.output_feature_info([row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
-            return True # 特徴出力に成功したのでTrueを返す
+            feature_list = self.output_feature_info([row[0] for row in zipped_list], [row[1] for row in zipped_list], [row[2] for row in zipped_list], [row[3] for row in zipped_list], [row[4] for row in zipped_list]) # 特徴を出力する
+            return feature_list # 特徴出力に成功したのでTrueを返す
         else:
-            return False # データがなければFalseを返す
+            return [] # データがなければFalseを返す
