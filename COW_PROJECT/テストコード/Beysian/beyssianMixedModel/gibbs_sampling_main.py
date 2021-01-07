@@ -92,7 +92,6 @@ def gaussian_mixed_model_test():
     X2 = create_artificial_gaussiandata(np.array([70, 20]), np.array([[150, 75], [75, 150]]), 900)
     X = np.concatenate([X1, X2], 0) # 2つのndarrayを結合
     np.random.shuffle(X) # データをシャッフル
-    X = X.T
 
     # データの可視化
     plotter = plotting.PlotUtility()
@@ -118,12 +117,12 @@ def gaussian_mixed_model_test():
     prob_matrix, dist_matrix = gaussian_model.predict(new_data)
     
     # クラスタリング結果を可視化
-    X1 = np.array(extract_data(X, result, 0))
-    X2 = np.array(extract_data(X, result, 1))
+    X1 = np.array([x for x, s in zip(X, result) if s[0] == 1])
+    X2 = np.array([x for x, s in zip(X, result) if s[1] == 1])
     plotter2 = plotting.PlotUtility()
     plotter2.scatter_plot(X1[:,0], X1[:,1], [1 for _ in range(len(X1))])
     plotter2.scatter_plot(X2[:,0], X2[:,1], [2 for _ in range(len(X2))])
-
+    
     plotter_dist = plotting.PlotUtility3D()
     dist1 = np.array([dist_x[0] for dist_x in dist_matrix])
     dist2 = np.array([dist_x[1] for dist_x in dist_matrix])

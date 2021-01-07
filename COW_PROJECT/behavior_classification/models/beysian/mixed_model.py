@@ -1,6 +1,7 @@
 import math
 import numpy as np
 from scipy import stats # カテゴリ分布から乱数を生成, ウィシャート分布から乱数を生成
+from scipy.special import logsumexp # overflowを起こしにくくする
 import sys
 import pdb # デバッグ用
 
@@ -158,20 +159,20 @@ class GaussianMixedModel:
     def gibbs_sample(self, X, m, beta, nd, W):
         """ ギブスサンプリングにより各クラスタの真値を推定する
             Parameter
-                X       : D*N行列
+                X       : N*D行列
                 m       : D次元ベクトル     ガウス・ウィシャート分布のハイパーパラメータ
                 beta    : >0のスカラー値    ガウス・ウィシャート分布のハイパーパラメータ
                 nd      : >D-1のスカラー値  ガウス・ウィシャート分布のハイパーパラメータ
                 W       : D*D行列           ガウス・ウィシャート分布のハイパーパラメータ
             Return
-                S   : K*N行列   予測した各クラスの割り当て """
-        D, N, K = len(X), len(X.T), len(self.pi_vector) # 次元数とデータ数とクラスタ数
+                S   : N*K行列   予測した各クラスの割り当て """
+        D, N, K = len(X[0]), len(X), len(self.pi_vector) # 次元数とデータ数とクラスタ数
         m_list = [None] * K # K個の要素を持つリスト
         beta_list = [0.0] * K # K個の要素を持つリスト
         nd_list = [0.0] * K # K個の要素を持つリスト
         W_list = [None] * K # K個の要素を持つリスト
-        S = np.zeros((K, N)) # K*N行列，1ofK表現    クラスタの割り当ての行列
-        eta = np.zeros((K, N)) # K*N行列    カテゴリ分布のパラメータ
+        S = np.zeros((N, K)) # N*K行列，1ofK表現    クラスタの割り当ての行列
+        eta = np.zeros((N, K)) # N*K行列    カテゴリ分布のパラメータ
         self._initialize(m_list, beta_list, nd_list, W_list, m, beta, nd, W, K)
         for i in range(self._maxiter):
             print(i+1, "回目のサンプリング")
@@ -194,10 +195,10 @@ class GaussianMixedModel:
         return
 
     def _sample_s(self, X, S, eta, N, K, D):
-        """ S[n]をサンプルする
+        """ S[n]をサンプルする (logsumexpでオーバーフローを防止している)
             Parameter
-                X   : D*N行列   入力データ
-                S   : K*N行列   予測した各クラスの割り当て
+                X   : N*D行列   入力データ
+                S   : N*K行列   予測した各クラスの割り当て
                 N   : データ数
                 K   : クラスタ数
                 D   : データの次元数 """
@@ -205,26 +206,28 @@ class GaussianMixedModel:
         mu = np.zeros((K,D,1))
         lam = np.zeros((K,D,D))
         for n in range(N):
+            log_eta = np.zeros(K)
             for k in range(K):
+                X_vec = X[n].reshape((D,1))
                 mu[k] = np.array([self.mu_vectors[k]]).T
                 lam[k] = np.linalg.inv(self.cov_matrixes[k])
-                eta[k,n] = np.exp(-1/2 * (np.dot((X[:,n:n+1] - mu[k]).T, np.dot(lam[k], (X[:,n:n+1] - mu[k])))[0,0]) + 1/2 * np.log(np.linalg.det(lam[k])) + np.log(self.pi_vector[k]))
-            eta[:,n] = list(p/sum(eta[:,n]) for p in eta[:,n])
+                log_eta[k] = -1/2 * (np.dot((X_vec - mu[k]).T, np.dot(lam[k], (X_vec - mu[k])))[0,0]) + 1/2 * np.log(np.linalg.det(lam[k])) + np.log(self.pi_vector[k])
+                # eta[n,k] = np.exp(-1/2 * (np.dot((X_vec - mu[k]).T, np.dot(lam[k], (X_vec - mu[k])))[0,0]) + 1/2 * np.log(np.linalg.det(lam[k])) + np.log(self.pi_vector[k]))
+            # sum_eta_n = sum(eta[n])
+            tmp_eta = logsumexp(log_eta)
+            for k in range(K):
+                eta[n,k] = np.exp(log_eta[k] - tmp_eta)
             # snをサンプル
-            try: # エラー回避の応急処置としてtry-exceptしている
-                custm = stats.rv_discrete(name='custm', values=(xk, eta[:,n]))
-            except ValueError:
-                custm = stats.rv_discrete(name='custm', values=(xk, (np.ones(K)/sum(np.ones(K))).tolist())) # 等確率のカテゴリ分布
+            custm = stats.rv_discrete(name='custm', values=(xk, eta[n]))
             rnd = custm.rvs(size=1)
-            S[:,n] = np.array([1 if (k == rnd[0]) else 0 for k in range(K)])
-                
+            S[n] = np.array([1 if (k == rnd[0]) else 0 for k in range(K)])
         return
     
     def _sample_gaussian_parameters(self, X, S, m_list, beta_list, nd_list, W_list, N, K, D):
         """ ガウス分布のパラメータΛ_k, μ_kをサンプルする
             Parameter
-                X   : D*N行列   入力データ
-                S   : K*N行列   予測した各クラスの割り当て
+                X   : N*D行列   入力データ
+                S   : N*K行列   予測した各クラスの割り当て
                 m_list, beta_list, nd_list, W_list
                 N   : データ数
                 K   : クラスタ数 """
@@ -233,9 +236,9 @@ class GaussianMixedModel:
             sum_sx = np.zeros((D,1))
             sum_sxx = np.zeros((D,D))
             for n in range(N):
-                sum_s += S[k, n]
-                sum_sx += S[k, n] * X[:,n:n+1]
-                sum_sxx += S[k, n] * np.dot(X[:,n:n+1], X[:,n:n+1].T)
+                sum_s += S[n, k]
+                sum_sx += np.dot(S[n, k], X[n].reshape((D,1)))
+                sum_sxx += np.dot(S[n, k], np.dot(X[n].reshape((D,1)), X[n].reshape((D,1)).T))
             # パラメータ更新，この順番に更新するのが正しい? 
             beta_list[k] = sum_s + self._beta
             m_list[k] = (sum_sx + np.dot(self._beta, self._m_vector)) / beta_list[k]
@@ -251,12 +254,12 @@ class GaussianMixedModel:
     def _sample_pi(self, S, N, K):
         """ piをサンプルする
             Parameter
-                S   : K*N行列   予測した各クラスの割り当て
+                S   : N*K行列   予測した各クラスの割り当て
                 N   : データ数
                 K   : クラスタ数 """
         for k in range(K):
             for n in range(N):
-                self._alpha_vector[k] += S[k,n]
+                self._alpha_vector[k] += S[n,k]
         # pi_vectorをサンプル
         self.pi_vector = np.random.dirichlet(self._alpha_vector)
         # pdb.set_trace()
@@ -293,7 +296,7 @@ class GaussianMixedModel:
             nd[k] = self._student_parameters[k][2]
         # new_Xに対して確率推定
         for m in range(M):
-            X = new_X[m].reshape((2, 1))
+            X = new_X[m].reshape((D, 1))
             for k in range(K):
                 equ1 = 0.0
                 for d in range(1, D+1):

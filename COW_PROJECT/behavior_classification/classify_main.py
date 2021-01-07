@@ -1,7 +1,11 @@
 import os, sys
 import csv
 import datetime
+from dateutil.relativedelta import relativedelta # 1か月後を計算するため
+import numpy as np
 import pdb
+
+np.random.seed(20210107)
 
 #自作クラス
 os.chdir('../') # カレントディレクトリを一階層上へ
@@ -23,6 +27,18 @@ def get_existing_cow_list(date:datetime, filepath):
     sys.exit()
     return
 
+def choose_training_date(begin, end, N=5):
+    """ 訓練に使う日付を決定する
+        N: int  取り出す日付の個数 """
+    date_list = []
+    rang = (end - begin).days
+    rnd_nums = np.arange(rang) # 0 ~ rang - 1番までの数列を作成
+    np.random.shuffle(rnd_nums) # shuffleして最初のN個を取り出す
+    for i in range(N):
+        date = begin + datetime.timedelta(days=int(rnd_nums[i])) # 期間内のランダムな日付を取り出す
+        date_list.append(date)
+    return date_list
+
 def confirm_dir(dir_path):
     """ ファイルを保管するディレクトリが既にあるかを確認し，なければ作成する """
     if (os.path.isdir(dir_path)):
@@ -33,17 +49,27 @@ def confirm_dir(dir_path):
         return
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 12, 30, 0, 0, 0)
-    end = datetime.datetime(2018, 12, 31, 0, 0, 0)
+    start = datetime.datetime(2018, 12, 1, 0, 0, 0) # 必ず1日始まりとすること
+    end = start + relativedelta(months=12) # 約1か月単位
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     output_dir = "./behavior_information/"
     date = start
+    month_begining = start # 月初
     while (date < end):
+        # --- 月初にその月の行動の分布をまとめて学習 (事後分布の計算) ---
+        if (date == month_begining):
+            month_end = month_begining + relativedelta(months=1) # 翌月1日
+            date_list = choose_training_date(month_begining, month_end)
+            cow_id_lists = [get_existing_cow_list(choosed_date, cows_record_file) for choosed_date in date_list]
+            model = classifier.Classifier()
+            model.fit(date_list, cow_id_lists) # 推論
+            month_begining += relativedelta(month=1) # 翌月
         cow_id_list = get_existing_cow_list(date, cows_record_file)
+        # --- 各日付, 牛ごとに分類 (予測分布を使った予測) ---
+        print("行動の推論を行います: %s" %(date.strftime("%Y/%m/%d")))
         for cow_id in cow_id_list:
             output_file = output_dir + date.strftime("%Y%m%d")
             confirm_dir(output_file) # ディレクトリを作成
-            model = classifier.Classifier()
             t_list, v_list, labels = model.classify(date, cow_id) # 行動分類を行う
             if (len(t_list) != 0):
                 filename = output_file + "/" + str(cow_id) + ".csv"
@@ -52,5 +78,6 @@ if __name__ == '__main__':
                 model.plot_v_label(t_list, v_list, labels, filename)
             else:
                 continue
+        print("行動の推論が終了しました")
         date += datetime.timedelta(days=1)
  

@@ -89,40 +89,77 @@ class Classifier:
 		pdb.set_trace()
 		return
 
-	def classify(self, date, target_cow_id):
-		# 事前パラメータを用意
+	def fit(self, date_list, cow_id_lists):
+		""" 事前分布をもとに学習を行う (ある範囲の中でランダムにデータを取り出しfeature_listを作成し学習に使用)
+			date_list:	list[datetime.datetime]	推論に使用する日付
+			cow_id_lists:	list[str]	推論に使用する日付における牛の個体番号リスト """
+		# --- 事前パラメータを用意 ---
 		cov_matrixes_r = [self.rest_dist.get_cov_matrix(), self.graze_dist_r.get_cov_matrix()]
 		mu_vectors_r = [self.rest_dist.get_mean_vector(), self.graze_dist_r.get_mean_vector()]
-		pi_vector_r = [0.3, 0.7]
+		pi_vector_r = [0.2, 0.8]
 		alpha_vector_r = [1, 1]
 
 		cov_matrixes_w = [self.graze_dist_a.get_cov_matrix(), self.walk_dist.get_cov_matrix()]
 		mu_vectors_w = [self.graze_dist_a.get_mean_vector(), self.walk_dist.get_mean_vector()]
-		pi_vector_w = [0.3, 0.7]
+		pi_vector_w = [0.9, 0.1]
 		alpha_vector_w = [1, 1]
-		max_iterater = 50
+		max_iterater = 10
+
+		# --- 推論用のデータを生成 ---
+		print("推論用のデータを生成します")
+		feature_data = []
+		for date, cow_id_list in zip(date_list, cow_id_lists):
+			for cow_id in cow_id_list:
+				# --- 特徴抽出 ---
+				print("date: %s, cow_id: %s" %(date.strftime("%Y/%m/%d"), cow_id))
+				features = feature_extraction.FeatureExtraction(date, cow_id)
+				feature_list = features.output_features()
+				if (len(feature_list) != 0):
+					feature_data.extend(feature_list) # dataを追加
+		np.random.shuffle(feature_data) # データをシャッフル
+		feature_data = feature_data[: int(0.1 * len(feature_data))] # 無作為に抽出
+		print("推論用のデータの生成が終わりました")
+
+		# --- データをもとに学習を開始する ---
+		print("パラメータの推論を行います")
+		df = pd.DataFrame(data=feature_data, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "MaxVelocity", "MinVelocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
+		X_rest = df[self.rest_names].values
+		X_walk = df[self.walk_names].values
+		# ギブスサンプリングによるクラスタリング (内部のクラスで事後分布のパラメータが記録されている)
+		self.mixture_model_r = mixed_model.GaussianMixedModel(cov_matrixes_r, mu_vectors_r, pi_vector_r, alpha_vector_r, max_iterater)
+		self.mixture_model_r.gibbs_sample(X_rest, np.array([[0, 0, 0]]).T, 1, 4, np.eye(3)) # 休息セグメントのクラスタリング
+		self.mixture_model_a = mixed_model.GaussianMixedModel(cov_matrixes_w, mu_vectors_w, pi_vector_w, alpha_vector_w, max_iterater)
+		self.mixture_model_a.gibbs_sample(X_walk, np.array([[0, 0, 0]]).T, 1, 4, np.eye(3)) # 歩行セグメントのクラスタリング
+		print("パラメータの推論が終了しました")
+
+		# --- パラメータを記録する ---
+		mu_r, cov_r = self.mixture_model_r.get_gaussian_parameters()
+		pi_r = self.mixture_model_r.get_pi_vector()
+		mu_a, cov_a = self.mixture_model_a.get_gaussian_parameters()
+		pi_a = self.mixture_model_a.get_pi_vector()
+		filepath = "./behavior_information/parameter_log/" + date_list[0].strftime("%Y%m") + ".csv"
+		self._write_parameter_log(mu_r, cov_r, pi_r, mu_a, cov_a, pi_a, filepath) # 事後分布のパラメータのログを残す
+		return
+
+	def classify(self, date, target_cow_id):
 		t_list, p_list, d_list, v_list, a_list = loading.load_gps(target_cow_id, date) #2次元リスト (1日分)
-		# --- 前処理 ---
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #牛舎内にいる時間を除く
 		if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0):
 			# --- 特徴抽出 ---
 			features = feature_extraction.FeatureExtraction(date, target_cow_id)
 			feature_list = features.output_features()
-			# --- 仮説検証 ---
-			df = pd.DataFrame(data=feature_list, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "Max velocity", "Min velocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
-			# df = pd.read_csv(features_file, sep = ",", header = 0, usecols = [0,3,4,5,6,9,10,11,12], names=('Time', 'RTime', 'WTime', 'AccumulatedDis', 'VelocityAve', 'RestVelocityAve', 'RestVelocityDiv', 'WalkVelocityAve', 'WalkVelocityDiv')) # csv読み込み
-			X_rest = df[self.rest_names].values.T
-			X_walk = df[self.walk_names].values.T
-			# ギブスサンプリングによるクラスタリング
-			gaussian_model_rest = mixed_model.GaussianMixedModel(cov_matrixes_r, mu_vectors_r, pi_vector_r, alpha_vector_r, max_iterater)
-			rest_result = gaussian_model_rest.gibbs_sample(X_rest, np.array([[0, 0, 0]]).T, 1, 4, np.eye(3)) # 休息セグメントのクラスタリング
-			gaussian_model_walk = mixed_model.GaussianMixedModel(cov_matrixes_w, mu_vectors_w, pi_vector_w, alpha_vector_w, max_iterater)
-			walk_result = gaussian_model_walk.gibbs_sample(X_walk, np.array([[0, 0, 0]]).T, 1, 4, np.eye(3)) # 歩行セグメントのクラスタリング
-			rest_result = postprocessing.process_result(rest_result, 0)
-			walk_result = postprocessing.process_result(walk_result, 1)
+			# --- 入力する特徴量の抽出 ---
+			df = pd.DataFrame(data=feature_list, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "MaxVelocity", "MinVelocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
+			X_rest = df[self.rest_names].values
+			X_walk = df[self.walk_names].values
+			# --- 予測分布による分類 ---
+			print("date: %s, cow_id: %s" %(date.strftime("%Y/%m/%d"), target_cow_id))
+			rest_prob, _ = self.mixture_model_r.predict(X_rest)
+			rest_result = np.argmax(rest_prob, axis=1)
+			walk_prob, _ = self.mixture_model_a.predict(X_walk)
+			walk_result = np.argmax(walk_prob, axis=1)
+			walk_result = np.array([k+1 for k in walk_result]) # graze 0->1, walk 1->2
 			df = pd.concat([df, pd.Series(data=rest_result, name='rest_prediction'), pd.Series(data=walk_result, name='walk_prediction')], axis=1)
-			# df.to_csv("behavior_classification/prediction.csv")
-
 			# --- 復元 ---
 			zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
 			labels = []
@@ -146,6 +183,20 @@ class Classifier:
 		pred_plot = my_plot.PlotUtility()
 		pred_plot.scatter_time_plot(t_list, v_list, labels) # 時系列で速さの散布図を表示
 		pred_plot.save_fig(output_file)
+		return
+
+	def _write_parameter_log(self, mu_r, cov_r, pi_r, mu_a, cov_a, pi_a, filepath):
+		""" パラメータのログを取る """
+		with open(filepath, mode='w', newline="") as f:
+			writer = csv.writer(f)
+			writer.writerow(["pi (rest, graze)", pi_r.tolist()])
+			writer.writerow(["average (rest)", mu_r[0].tolist(), "average (rest-graze)", mu_r[1].tolist()])
+			writer.writerow(["cov (rest)", cov_r[0].tolist(), "cov (rest-graze)", cov_r[1].tolist()])
+			writer.writerow(["pi (graze, walk)", pi_a.tolist()])
+			writer.writerow(["average (act-graze)", mu_a[0].tolist(), "average (walk)", mu_a[1].tolist()])
+			writer.writerow(["cov (act-graze)", cov_a[0].tolist(), "cov (walk)", cov_a[1].tolist()])
+			writer.writerow(["\n"])
+		print("%sにパラメータのログを出力しました" %filepath)
 		return
 
 # if __name__ == '__main__':
