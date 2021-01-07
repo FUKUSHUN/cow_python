@@ -169,7 +169,7 @@ class FeatureExtraction:
         for i, (time, pos, dis, vel, label) in enumerate(zip(t_list, p_list, d_list, v_list, l_list)):
             if (label == behavior_dict["walking"]): # 歩行
                 if (i != 0): # 最初は休息から始まるようにする (もし最初が歩行ならそのデータは削られる)
-                    time_index += time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S")
+                    time_index.append((time[0], time[1]))
                     walking_time_category = self._decide_time_category(time[0], initial_datetime)
                     walking_length = (time[1] - time[0]).total_seconds() / 5 + 1
                     walking_velocity_average, walking_velocity_deviation = self._extract_mean(vel) # 活動セグメント内の平均速度とその標準偏差
@@ -196,7 +196,7 @@ class FeatureExtraction:
                 before_lon = pos[len(pos) - 1][1]
                 resting_velocity_average, resting_velocity_deviation = self._extract_mean(vel) # 休息セグメント内の平均速度とその標準偏差
                 rest_vel = vel
-                time_index = time[0].strftime("%Y/%m/%d %H:%M:%S") + "-" + time[1].strftime("%Y/%m/%d %H:%M:%S") + " | "
+                time_index = [(time[0], time[1])]
         
         print("---特徴を計算しました")
         print(sys._getframe().f_code.co_name, "正常終了\n")

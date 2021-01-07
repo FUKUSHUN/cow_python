@@ -24,7 +24,7 @@ def get_existing_cow_list(date:datetime, filepath):
     print("指定の日付の牛のリストが見つかりません", date.strftime("%Y/%m/%d"))
     sys.exit()
 
-def choose_training_date(begin, end, N=5):
+def choose_training_date(begin, end, N=10):
     """ 訓練に使う日付を決定する
         N: int  取り出す日付の個数 """
     date_list = []

@@ -16,7 +16,6 @@ import pdb # デバッグ用
 import behavior_classification.functions.loading as loading
 import behavior_classification.functions.preprocessing as preprocessing
 import behavior_classification.functions.plotting as plotting
-import behavior_classification.functions.regex as regex
 import behavior_classification.functions.postprocessing as postprocessing
 
 #自作クラス
@@ -142,6 +141,9 @@ class Classifier:
 		return
 
 	def classify(self, date, target_cow_id):
+		""" 予測分布を元に行動を分類する
+			date:	datetime.datetime
+			target_cow_id:	str """
 		t_list, p_list, d_list, v_list, a_list = loading.load_gps(target_cow_id, date) #2次元リスト (1日分)
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #牛舎内にいる時間を除く
 		if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0):
@@ -150,6 +152,7 @@ class Classifier:
 			feature_list = features.output_features()
 			# --- 入力する特徴量の抽出 ---
 			df = pd.DataFrame(data=feature_list, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "MaxVelocity", "MinVelocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
+			df.to_csv("./behavior_classification/training_data/features.csv") # デバッグ用に残しておく（正常終了すれば次にこのメソッドが呼び出されたときに上書きされる）
 			X_rest = df[self.rest_names].values
 			X_walk = df[self.walk_names].values
 			# --- 予測分布による分類 ---
@@ -161,11 +164,15 @@ class Classifier:
 			walk_result = np.array([k+1 for k in walk_result]) # graze 0->1, walk 1->2
 			df = pd.concat([df, pd.Series(data=rest_result, name='rest_prediction'), pd.Series(data=walk_result, name='walk_prediction')], axis=1)
 			# --- 復元 ---
-			zipped_t_list = regex.str_to_datetime(df['Time'].tolist())
+			zipped_t_list = []
+			for time_index in df['Time'].tolist():
+				zipped_t_list.append(time_index[0])
+				zipped_t_list.append(time_index[1])
 			labels = []
 			for r, w in zip(rest_result, walk_result):
 				labels.append(r)
 				labels.append(w)
+			t_list = [time for time in t_list if zipped_t_list[0][0] <=time]
 			new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
 			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
 			return new_t_list, new_v_list, labels
