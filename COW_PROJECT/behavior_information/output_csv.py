@@ -69,10 +69,14 @@ if __name__ == '__main__':
             confirm_dir(output_file) # ディレクトリを作成
             t_list, v_list, labels = model.classify(date, cow_id) # 行動分類を行う
             if (len(t_list) != 0):
-                filename = output_file + "/" + str(cow_id) + ".csv"
-                model.to_csv(t_list, v_list, labels, filename) # csv出力する
-                filename = output_file + "/" + str(cow_id) + ".jpg"
-                model.plot_v_label(t_list, v_list, labels, filename)
+                try:
+                    filename = output_file + "/" + str(cow_id) + ".csv"
+                    model.to_csv(t_list, v_list, labels, filename) # csv出力する
+                    filename = output_file + "/" + str(cow_id) + ".jpg"
+                    model.plot_v_label(t_list, v_list, labels, filename)
+                except:
+                    print("エラーが発生しました " + date.strftime("%Y/%m/%d"))
+                    pdb.set_trace()
             else:
                 continue
         print("行動の推論が終了しました")

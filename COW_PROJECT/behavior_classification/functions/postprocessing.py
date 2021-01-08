@@ -29,7 +29,7 @@ def decompress(t_list, zipped_t_list, zipped_l_list):
 	圧縮後の時系列データは (start-end) を休息 | 歩行の形で記載している
 	例) 2018/12/30 13:00:30-2018/12/30 13:00:30 | 2018/12/30 13:00:35-2018/12/30 13:00:45 """
 	print(sys._getframe().f_code.co_name, "実行中")
-	index = 0
+	idx = 0
 	new_t_list = []
 	l_list = []
 	start = zipped_t_list[0][0]
@@ -43,10 +43,10 @@ def decompress(t_list, zipped_t_list, zipped_l_list):
 		if (final <= time):
 			break
 		if (end <= time):
-			index += 1
-			start = zipped_t_list[index][0]
-			end = zipped_t_list[index][1]
-			label = zipped_l_list[index]
+			idx += 1
+			start = zipped_t_list[idx][0]
+			end = zipped_t_list[idx][1]
+			label = zipped_l_list[idx]
 	print(sys._getframe().f_code.co_name, "正常終了\n")
 	return new_t_list, l_list
 
@@ -72,12 +72,12 @@ def make_new_list(old_t_list, new_t_list, something):
 		old_t_list  : 古い時間のリスト
 		new_t_list  : 新しい時間のリスト
 		something   : 何かのリスト（古い時間のリストと一対一対応） """
-	index = 0
-	new_something = []
+	idx = 0
+	something_new = []
 	start = new_t_list[0]
 	end = new_t_list[len(new_t_list) - 1]
 	for time in old_t_list:
 		if (start <= time and time <= end):
-			new_something.append(something[index])
-			index += 1
-	return new_something
+			something_new.append(something[idx])
+		idx += 1
+	return something_new

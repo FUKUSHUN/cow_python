@@ -102,7 +102,7 @@ class Classifier:
 		mu_vectors_w = [self.graze_dist_a.get_mean_vector(), self.walk_dist.get_mean_vector()]
 		pi_vector_w = [0.9, 0.1]
 		alpha_vector_w = [1, 1]
-		max_iterater = 10
+		max_iterater = 50
 
 		# --- 推論用のデータを生成 ---
 		print("推論用のデータを生成します")
@@ -145,7 +145,7 @@ class Classifier:
 			date:	datetime.datetime
 			target_cow_id:	str """
 		t_list, p_list, d_list, v_list, a_list = loading.load_gps(target_cow_id, date) #2次元リスト (1日分)
-		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list) #牛舎内にいる時間を除く
+		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list, date) #牛舎内にいる時間を除く
 		if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0):
 			# --- 特徴抽出 ---
 			features = feature_extraction.FeatureExtraction(date, target_cow_id)
@@ -172,10 +172,17 @@ class Classifier:
 			for r, w in zip(rest_result, walk_result):
 				labels.append(r)
 				labels.append(w)
-			t_list = [time for time in t_list if zipped_t_list[0][0] <=time]
 			new_t_list, labels = postprocessing.decompress(t_list, zipped_t_list, labels)
 			new_v_list = postprocessing.make_new_list(t_list, new_t_list, v_list)
-			return new_t_list, new_v_list, labels
+			# 12時から翌9時になるようにはみ出た部分をカットする
+			ret_t, ret_v, ret_l = [], [], []
+			for i, time in enumerate(new_t_list):
+				if (12 <= time.hour or time.hour < 9):
+					ret_t.append(new_t_list[i])
+					ret_v.append(new_v_list[i])
+					ret_l.append(labels[i])
+				i += 1
+			return ret_t, ret_v, ret_l
 		else:
 			return [], [], []
 	

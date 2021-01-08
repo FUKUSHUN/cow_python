@@ -51,8 +51,8 @@ def load_gps(cow_id, date):
     print("The length of time_list: ", len(time_list), "(data)\n")
     return time_list, position_list, distance_list, velocity_list, angle_list
 
-def select_used_time(time_list, position_list, distance_list, velocity_list, angle_list):
-    """ データの解析に使用する時間 (午後12時-午前9時 JST) 分を抽出する
+def select_used_time(time_list, position_list, distance_list, velocity_list, angle_list, date):
+    """ データの解析に使用する時間 (午後12時-午前9時 JST) 分を抽出する, 厳密には5分分余分に取り出す（行動分類時に切りおとされるため）
         Parameter
             time_list   : 時間の2次元リスト（1日分のデータ）
             position_list   : 緯度・経度の3次元リスト（(緯度, 経度) × 1日分のデータ）
@@ -73,8 +73,10 @@ def select_used_time(time_list, position_list, distance_list, velocity_list, ang
     new_distance_list = []
     new_velocity_list = []
     new_angle_list = []
+    start = datetime.datetime(date.year, date.month, date.day, 11, 55, 0) # その日の11:55
+    end = start + datetime.timedelta(hours=21) + datetime.timedelta(minutes=5) # 翌朝9:00
     for (t, p, d, v, a) in zip(time_list, position_list, distance_list, velocity_list, angle_list):
-        if(t.hour < 9 or 11 < t.hour):
+        if(start < t and t < end):
             new_time_list.append(t)
             new_position_list.append(p)
             new_distance_list.append(d) 

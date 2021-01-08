@@ -71,6 +71,7 @@ class PlotUtility:
 
     def save_fig(self, filename):
         plt.savefig(filename)
+        plt.close()
 
 class PlotUtility3D:
     fig = None
