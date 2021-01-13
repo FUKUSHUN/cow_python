@@ -46,8 +46,8 @@ def confirm_dir(dir_path):
         return
 
 if __name__ == '__main__':
-    start = datetime.datetime(2018, 12, 1, 0, 0, 0) # 必ず1日始まりとすること
-    end = start + relativedelta(months=12) # 約1か月単位
+    start = datetime.datetime(2019, 4, 1, 0, 0, 0) # 必ず1日始まりとすること
+    end = start + relativedelta(months=5) # 約1か月単位
     cows_record_file = os.path.abspath('../') + "/CowTagOutput/csv/" # 分析用のファイル
     output_dir = "./behavior_information/"
     date = start
@@ -60,7 +60,7 @@ if __name__ == '__main__':
             cow_id_lists = [get_existing_cow_list(choosed_date, cows_record_file) for choosed_date in date_list]
             model = classifier.Classifier()
             model.fit(date_list, cow_id_lists) # 推論
-            month_begining += relativedelta(month=1) # 翌月
+            month_begining += relativedelta(months=1) # 翌月
         cow_id_list = get_existing_cow_list(date, cows_record_file)
         # --- 各日付, 牛ごとに分類 (予測分布を使った予測) ---
         print("行動の推論を行います: %s" %(date.strftime("%Y/%m/%d")))
