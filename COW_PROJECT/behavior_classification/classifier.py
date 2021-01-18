@@ -146,10 +146,10 @@ class Classifier:
 			target_cow_id:	str """
 		t_list, p_list, d_list, v_list, a_list = loading.load_gps(target_cow_id, date) #2次元リスト (1日分)
 		t_list, p_list, d_list, v_list, a_list = loading.select_used_time(t_list, p_list, d_list, v_list, a_list, date) #牛舎内にいる時間を除く
-		if (len(p_list) != 0 and len(d_list) != 0 and len(v_list) != 0):
-			# --- 特徴抽出 ---
-			features = feature_extraction.FeatureExtraction(date, target_cow_id)
-			feature_list = features.output_features()
+		# --- 特徴抽出 ---
+		features = feature_extraction.FeatureExtraction(date, target_cow_id)
+		feature_list = features.output_features()
+		if (len(feature_list) != 0):
 			# --- 入力する特徴量の抽出 ---
 			df = pd.DataFrame(data=feature_list, columns=["Time", "Resting time category", "Walking time category", "RTime", "WTime", "AccumulatedDis", "VelocityAve", "MaxVelocity", "MinVelocity", "RestVelocityAve", "RestVelocityDiv", "WalkVelocityAve", "WalkVelocityDiv", "Distance", "Direction"])
 			df.to_csv("./behavior_classification/training_data/features.csv") # デバッグ用に残しておく（正常終了すれば次にこのメソッドが呼び出されたときに上書きされる）

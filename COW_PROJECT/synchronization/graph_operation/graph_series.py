@@ -31,6 +31,8 @@ class GraphSeriesAnalysis:
         reset_count = 0
         for i in range(len(self.graph_series)):
             if (i + W2 > len(self.graph_series)): # 現在時刻から後ろにW2個のグラフがない場合はそこで変化点検知を終了する
+                changepoint_list.extend(np.zeros(W2 - 1).tolist())
+                score_list.extend(np.zeros(W2 - 1).tolist())
                 break
             if (reset_count < W1): # 変化点から最初のW1個のグラフは変化点ではないとする
                 changepoint_list.append(0) # 変化点なら1, そうでなければ0
