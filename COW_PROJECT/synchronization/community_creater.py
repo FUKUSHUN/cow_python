@@ -99,12 +99,12 @@ class CommunityCreater:
         self._visualize_community(pos_df, communities, focusing_cow_id=target_cow_id) # 動画描画
         return
 
-    def visualize_adjectory(self, start, end, cow_id_list, target_cow_id=None, delta=5):
+    def visualize_adjectory(self, start, end, cow_id_list, target_cow_id=None, dirname=None, delta=5):
         """ 軌跡情報をプロットする
             target_cow_id : 指定があればこの牛の軌跡の描画色を変更する
             delta       int     データ抽出間隔．単位は秒 (というよりはデータ数を等間隔でスライスしている)  """
         _, pos_df = self._extract_and_merge_df(start, end, delta=delta) # データを抽出し結合
-        self._visualize_adjectory(pos_df, cow_id_list, focusing_cow_id=target_cow_id)
+        self._visualize_adjectory(pos_df, cow_id_list, focusing_cow_id=target_cow_id, dirname=dirname)
         return
 
     def _extract_and_merge_df(self, start, end, delta=5):
@@ -307,11 +307,11 @@ class CommunityCreater:
                     caption_list.append(str(cow_id) + ":" + str(i))
                     color_list.append(i)
                     break
-        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename="movie/", is_lined=True)
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename="movie/", is_lined=False)
         maker.make_movie(df, disp_adj=False)
         return
 
-    def _visualize_adjectory(self, df, cow_id_list, focusing_cow_id=None):
+    def _visualize_adjectory(self, df, cow_id_list, focusing_cow_id=None, dirname=None):
         """ 軌跡描画を行う
             cow_id_list: list       軌跡を描画する牛の個体番号リスト
             focusing_cow_id: str    Noneのときは全コミュニティを描画，指定ありの場合はその牛のみ別の色で描画 """
@@ -325,7 +325,9 @@ class CommunityCreater:
                 caption_list.append("") # キャプションを表示しない
                 color_list.append(0)
         new_df = df[cow_id_list] # communityを使ってdfから必要な要素を抽出
-        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename="adjectory/"+str(focusing_cow_id)+"/", image_filename="adjectory/"+str(focusing_cow_id)+"/")
+        video_filename = "adjectory/"+str(focusing_cow_id)+"/" if dirname is None else dirname + "adjectory/"+str(focusing_cow_id)+"/"
+        image_filename = "adjectory/"+str(focusing_cow_id)+"/" if dirname is None else dirname + "adjectory/"+str(focusing_cow_id)+"/"
+        maker = place_plot.PlotMaker(caption_list=caption_list, color_list=color_list, video_filename=video_filename, image_filename=image_filename)
         maker.make_adjectory(new_df)
         maker.make_movie(new_df, frame_rate=20.0, disp_adj=True)
         return

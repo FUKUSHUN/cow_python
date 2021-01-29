@@ -69,3 +69,31 @@ def _estimate_parameters2(series):
         theta[before_b, after_b] += 1
     theta /= sum(theta)
     return theta
+
+def cut_point_search_score(series, threshold = 45):
+    """ 行動の変化点を検出する
+        Return
+            change_point_series: list 変化点ならば1, でなければ0 """
+    idx = 0
+    stack_welfare = []
+    stack = [(series, idx)] # セグメントの候補をスタックする（データ集合，開始インデックス）
+    change_points = [idx]
+    while (len (stack) > 0):
+        behaviors, idx = stack.pop(0)
+        theta_0 = estimate_parameters(behaviors)
+        base_score = _measure_log_probability(behaviors, theta_0)
+        score_list = [0] # 1番最初の要素の変化点スコアは0とする
+        for i in range(1, len(behaviors)):
+            theta_1 = estimate_parameters(behaviors[:i])
+            theta_2 = estimate_parameters(behaviors[i:])
+            likelihood = _measure_log_probability(behaviors[:i], theta_1) + _measure_log_probability(behaviors[i:], theta_2) - base_score
+            score_list.append(likelihood)
+        stack_welfare.append((score_list, idx))
+        change_point_score = max(score_list)
+        if (threshold <= change_point_score):
+            change_point_idx = score_list.index(max(score_list))
+            segment1, segment2 = behaviors[:change_point_idx], behaviors[change_point_idx:]
+            stack.extend([(segment1, idx), (segment2, idx + change_point_idx)]) # セグメントを分割してstackに追加
+            change_points.append(idx + change_point_idx)
+    change_point_series = [1 if i in change_points else 0 for i in range(len(series))] # 変化点のみフラグを立てる
+    return change_point_series, stack_welfare

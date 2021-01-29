@@ -38,17 +38,21 @@ def visualize_community(date):
     t_start = date + datetime.timedelta(hours=12) # 正午12時を始まりとする
     t_end = date + datetime.timedelta(days=1) + datetime.timedelta(hours=9) # 翌午前9時を終わりとする
     while (t < t_end):
-        interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="position", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
+        interaction_graph = com_creater.make_interaction_graph(t, t+datetime.timedelta(minutes=delta_c), method="behavior", delta=delta_s, epsilon=epsilon, dzeta=dzeta) \
             if (t_start <= t) else np.array([[]]) # 重み付きグラフを作成
         community = com_creater.create_community(t, t+datetime.timedelta(minutes=delta_c), interaction_graph, delta=delta_s, leng=leng) \
             if (t_start <= t) else [[]] # コミュニティを決定
-        com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id=target_cow_id, delta=delta_s) # 位置情報とコミュニティをプロット
+        com_creater.visualize_position(t, t+datetime.timedelta(minutes=delta_c), community, target_cow_id=None, delta=delta_s) # 位置情報とコミュニティをプロット
         t += datetime.timedelta(minutes=delta_c)
     e1 = time.time()
     print("処理時間", (e1-s1)/60, "[min]")
     return
 
 if __name__ == "__main__":
-    target_cow_id = '20303'
-    date = datetime.datetime(2019, 3, 21, 0, 0, 0)
-    visualize_community(date) # 可視化ムービーの作成
+    # target_cow_id = '20303'
+    start = datetime.datetime(2018, 5, 2, 0, 0, 0) 
+    end = datetime.datetime(2018, 8, 1, 0, 0, 0)
+    date = start
+    while (date < end):
+        visualize_community(date) # 可視化ムービーの作成
+        date += datetime.timedelta(days=1)
