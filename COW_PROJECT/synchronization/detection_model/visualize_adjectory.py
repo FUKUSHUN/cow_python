@@ -37,12 +37,12 @@ def visualize_adjectory(target_cow_id, detected_cow_list, start, end, delta=5):
 
 if __name__ == "__main__":
     dirname = "./synchronization/detection_model/test/"
-    cow_id = '20267'
+    cow_id = str(sys.argv[1])
     filepath = dirname + 'detected.csv'
-    # record = pd.read_excel(filepath, usecols=[0, 1, 2, 3, 4, 5, 6])
+    # record = pd.read_excel(filepath, usecols=[0, 1, 2, 3, 4, 5, 6, 7], header=None) # header必須
     record = load_csv(filepath)
     for row in record:
-        target_cow_id = str(row[6])
+        target_cow_id = str(row[7])
         if (target_cow_id == cow_id):
             try:
                 start = datetime.datetime.strptime(row[0], '%Y/%m/%d %H:%M:%S')
